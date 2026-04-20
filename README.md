@@ -1,5 +1,5 @@
-# pharma-agent
-
+# pharma-agent 
+(side note:What I learn from multi-turn chatbot solution)
 > **A field guide + testable skill for building Korean multi-turn RAG
 > chatbots.**
 > Patterns from real production that don't show up in toy demos —
