@@ -1,11 +1,21 @@
-# korean-multiturn-rag benchmark suite
+# korean-multiturn-rag — benchmark suite
 
-TDD harness for the `korean-multiturn-rag` skill. Each scenario is a
-self-contained subagent prompt that tests ONE concept the skill is supposed
-to teach. The subagent receives only the scenario — no code, no hints,
-no skill. We compare behavior **without** vs **with** the skill.
+Two suites, measuring different things. Use both.
 
-## The six scenarios
+| Suite | What it measures | Strength | Weakness |
+|-------|------------------|----------|----------|
+| [`scenarios/`](scenarios/) (design-review) | Does a subagent **recall** the skill's bullets when asked a design question? | Cheap, deterministic, runs in seconds | Tautological — the rubric is basically the skill body, so "with skill" passes by default |
+| [`behavioral/`](behavioral/) (live tool-use) | Does the agent's **actual tool calls and answer text** change when the skill is injected? | Real behavior, real API, real delta | Slower, costs cents per run, harder to author scenarios |
+
+Start with the design-review suite as a smoke test that the skill is
+internally consistent. Trust the behavioral suite for whether it
+actually moves anything.
+
+## Design-review suite (`scenarios/`)
+
+Six scenarios, each a self-contained subagent prompt + hidden rubric.
+Dispatch the subagent with and without the skill body prepended; grade
+the response against the rubric.
 
 | # | Concept under test | Pass criterion |
 |---|--------------------|----------------|
@@ -16,25 +26,52 @@ no skill. We compare behavior **without** vs **with** the skill.
 | S5 | Hedge-phrase regression ("직접적인 내용은 없으나") | Agent identifies this as a PROMPT problem, not retrieval. Proposes prompt edits distinguishing "no info" from "partial info". |
 | S6 | Korean intent routing (no regex) | Agent refuses hardcoded `if "만" in query` style routing. Uses LLM or tool-schema routing instead. |
 
-## Pass/fail grading
+Captured grading in [`results/red/`](results/red/) (baseline) and
+[`results/green/`](results/green/) (post-skill).
 
-Each scenario has an explicit **rubric** listing the ≥3 concrete behaviors
-the answer must exhibit to pass. Missing any = FAIL. No partial credit —
-the skill either teaches the agent correctly or it doesn't.
+**Observed ratio when we built the suite: 22/33 → 33/33.** We now
+consider this suite a smoke test only — it confirms the skill's
+instructions are legible to an LLM, not that they change downstream
+behavior.
 
-## Protocol
+## Behavioral suite (`behavioral/`)
 
-1. **RED**: dispatch all 6 scenarios as general-purpose subagents WITHOUT
-   the skill. Record verbatim rationalizations. Expected: multiple FAILs.
-2. **GREEN**: write `SKILL.md` targeting the specific failures observed.
-   Dispatch all 6 scenarios WITH the skill injected into the prompt.
-   Expected: all PASS.
-3. **REFACTOR**: any new rationalization that emerges → add explicit
-   counter. Re-run until bulletproof.
+Live pytest harness. Each scenario is a multi-turn conversation against
+an Anthropic model with scripted mock tools. Assertions fire on actual
+tool calls and final text per turn.
 
-## Files
+Includes **long-horizon scenarios (12–13 turns)** with checkpoint
+assertions only at critical turns — these are what expose the real
+multi-turn failure modes (state decay, sticky-filter drop on ambiguous
+words, late-turn sycophancy).
 
-- `scenarios/S{1..6}-*.md` — scenario prompt + rubric
-- `results/red/` — baseline outputs
-- `results/green/` — post-skill outputs
-- `results/summary.md` — rubric checkmarks per scenario per round
+See [`behavioral/README.md`](behavioral/README.md) for setup, run
+commands, scenario coverage, and how to author new scenarios.
+
+## Results
+
+Live captured results live in [`results/behavioral/`](results/behavioral/)
+— one file per (model, scenario-group). Current:
+
+- [`haiku-4-5.md`](results/behavioral/haiku-4-5.md) — short + mid-horizon
+  suite on Haiku 4.5. Skill delta: zero. Baseline handles everything.
+- [`haiku-4-5-l01-sticky-exclude.md`](results/behavioral/haiku-4-5-l01-sticky-exclude.md)
+  — the L01 long-horizon sticky-exclude scenario. **First real skill
+  delta: 0/3 → 2/3 on Haiku 4.5** after adding the persistent-filter
+  disambiguation rule (SKILL.md section B.1).
+
+More results TBD as the suite grows (Sonnet, Opus, Haiku 3.5, and
+OpenAI-compatible endpoints for OSS models via a planned vLLM adapter).
+
+## TDD protocol we follow
+
+1. **RED** — author a behavioral scenario, run it without the skill
+   injected. Expect failure on a real pattern the skill claims to
+   handle.
+2. **GREEN** — add the targeted rule to SKILL.md. Re-run. Expect pass.
+3. **REFACTOR** — if a new rationalization slips through, add an
+   explicit counter and re-run. Keep until bulletproof on this
+   scenario across N runs and ≥2 models.
+
+If a scenario can't pass RED without the skill AND pass GREEN with it,
+the rule doesn't belong in SKILL.md.
