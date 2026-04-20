@@ -1,101 +1,163 @@
 # pharma-agent
 
-Production lessons from building an agentic RAG system for a Korean pharmaceutical
-company over three months. Not a framework. A **field guide** — the non-obvious
-failure modes, the disciplines that prevented them, and the prompts/patterns that
-actually shipped.
+> **A field guide + testable skill for building Korean multi-turn RAG
+> chatbots.**
+> Patterns from real production that don't show up in toy demos —
+> each pattern paired with a runnable behavioral benchmark so you can
+> see for yourself what moves and what doesn't.
 
-## Why this exists
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Skill: korean-multiturn-rag](https://img.shields.io/badge/skill-korean--multiturn--rag-7c3aed)](skills/korean-multiturn-rag/)
+[![Benchmark: Haiku 4.5](https://img.shields.io/badge/benchmark-Haiku%204.5-orange)](skills/korean-multiturn-rag/benchmarks/results/behavioral/)
+[![Docs: EN + KO](https://img.shields.io/badge/docs-EN%20%2B%20KO-green)](docs/)
 
-Most agentic RAG writeups are toy demos or generic LangChain tutorials. (Which is great, And I love lanchain framework.) 
-Production systems — especially in **regulated industries** with **multi-turn Korean queries**
-— break in ways that don't show up in the toy version:
+---
 
-- The agent's thinking panel shows a better answer than the final output.
-- Followup turns broaden into unrelated data instead of filtering prior results.
-- The verifier flags spurious mismatches because it can't see prior-turn context.
-- "Quick fix" if-else chains silently degrade routing after every LLM upgrade.
+## What's in this repo
 
-We hit all of these in production. The fixes are never what you'd guess on the
-first read. This repo documents them.
+1. **Field guide** — six chapters in English **and** Korean on the
+   non-obvious failure modes of Korean multi-turn RAG (retrieval
+   broadening, verifier false-positives, particle-induced filter
+   collapse, hedge-phrase regression, GMP-grade citation).
+2. **A Claude Code skill**
+   ([`korean-multiturn-rag`](skills/korean-multiturn-rag/)) distilled
+   from the field guide. Auto-loads when you work on a Korean
+   multi-turn agent.
+3. **A real behavioral benchmark** — not design-review recall. Live
+   Anthropic API + scripted mock tools + pytest grading on actual
+   tool calls and final text, including **13-turn long-horizon
+   scenarios** that surface failures two-turn tests can't.
 
-## Scope
+---
 
-- **In**: prompt patterns, failure modes, session-state design, verifier design,
-  Korean NLP gotchas, regulated-industry citation discipline.
-- **Out**: a full framework. We use FastAPI + Milvus + vLLM; your stack can
-  differ. The patterns are framework-agnostic.
+## Proof that it does something
 
-## Layout
+The first behavioral scenario where our skill flipped a baseline
+failure into a pass on a frontier model:
 
-Docs are published in English and Korean (한국어). Both versions are maintained
-side by side — pick whichever you prefer.
+| Scenario | Baseline (no skill) | With skill | Model |
+|---|:-:|:-:|---|
+| **L01 — sticky exclude over 13 turns**  (`바이오 제외` set early, user later says "전체 다시 보여줘") | **0 / 3 FAIL** — exclude silently drops | **2 / 3 PASS** — exclude survives; only drops on explicit revoke | `claude-haiku-4-5` |
 
-| Topic | EN | KO | Status |
-|-------|----|----|--------|
-| Prompt-first debugging — code is a last resort, not a first reach | [`docs/en/01-...`](docs/en/01-prompt-first-debugging.md) | [`docs/ko/01-...`](docs/ko/01-prompt-first-debugging.md) | ✅ |
-| Bug patterns — failure modes we hit repeatedly + fix direction | [`docs/en/02-...`](docs/en/02-bug-patterns.md) | [`docs/ko/02-...`](docs/ko/02-bug-patterns.md) | ✅ |
-| Session state design — what to persist between turns | [`docs/en/03-...`](docs/en/03-session-state-design.md) | [`docs/ko/03-...`](docs/ko/03-session-state-design.md) | ✅ |
-| Verifier cross-turn context — why post-gen verifiers false-positive on followups | [`docs/en/04-...`](docs/en/04-verifier-cross-turn.md) | [`docs/ko/04-...`](docs/ko/04-verifier-cross-turn.md) | 🟡 draft |
-| Korean NLP gotchas — particles, 제형 classification, hedge-phrase regression, Hangul normalization, bracket-leak | [`docs/en/05-...`](docs/en/05-korean-nlp-gotchas.md) | [`docs/ko/05-...`](docs/ko/05-korean-nlp-gotchas.md) | 🟡 draft |
-| Pharma-specific patterns — QMS/SOP/CAPA, 변경관리 citation, dosage-form fallback | [`docs/en/06-...`](docs/en/06-pharma-specific.md) | [`docs/ko/06-...`](docs/ko/06-pharma-specific.md) | 🟡 draft |
+Full breakdown — what works, what doesn't, which scenarios the
+baseline already handles natively, which the skill still can't fix —
+in
+[`skills/korean-multiturn-rag/benchmarks/results/behavioral/`](skills/korean-multiturn-rag/benchmarks/results/behavioral/).
 
-Other folders:
+**Honest caveat we won't hide:** on the short (2–3 turn) suite and on
+two of three long-horizon scenarios, the skill's delta is zero —
+Haiku 4.5 already handles those patterns. The value is concentrated
+in long-horizon state management (see L01) and likely much larger on
+smaller models (cross-model testing is a planned next step).
 
-- `prompts/` — example system prompts, recipes, verifier templates. _(TBD)_
-- `examples/` — minimal reference implementations, illustrative not production-grade. _(TBD)_
-- `skills/` — short field-guide snippets for Claude Code / Codex / Copilot CLI, distilled from these docs. Currently: [`korean-multiturn-rag`](skills/korean-multiturn-rag/) — helps you build a multi-turn Korean chatbot. Honest caveat: on frontier models like Haiku 4.5, most of these patterns are already handled natively — the skill's measurable delta is small. Install via symlink into `~/.claude/skills/` — see [`skills/README.md`](skills/README.md).
+---
 
-## Who this is for
+## Quick start
 
-- Engineers building production agentic RAG, especially for:
-  - Regulated industries (pharma, finance, legal) where wrong answers have consequences.
-  - Multi-turn conversational workflows where followups must reason over prior data.
-  - Non-English languages where tokenizer/particle behavior changes search results.
-- Anyone debugging an agent whose thinking log looks smarter than its final answer.
+### 1 · Read the field guide
 
-## Install the skill (for Claude Code)
+Docs are side-by-side EN + KO — pick whichever reads faster for you.
 
-If you use Claude Code, Codex CLI, or any skill-aware harness, the
-`korean-multiturn-rag` skill can be auto-loaded whenever you work on a
-Korean multi-turn chatbot.
+| # | Topic | English | 한국어 |
+|---|-------|---------|--------|
+| 01 | Prompt-first debugging | [en](docs/en/01-prompt-first-debugging.md) | [ko](docs/ko/01-prompt-first-debugging.md) |
+| 02 | Bug patterns in production agentic RAG | [en](docs/en/02-bug-patterns.md) | [ko](docs/ko/02-bug-patterns.md) |
+| 03 | Session state design for multi-turn | [en](docs/en/03-session-state-design.md) | [ko](docs/ko/03-session-state-design.md) |
+| 04 | Verifier cross-turn context | [en](docs/en/04-verifier-cross-turn.md) | [ko](docs/ko/04-verifier-cross-turn.md) |
+| 05 | Korean NLP gotchas | [en](docs/en/05-korean-nlp-gotchas.md) | [ko](docs/ko/05-korean-nlp-gotchas.md) |
+| 06 | Pharma-specific patterns | [en](docs/en/06-pharma-specific.md) | [ko](docs/ko/06-pharma-specific.md) |
+
+### 2 · Install the skill (for Claude Code)
 
 ```bash
-# one-time install — symlink the repo into your user skills directory
 git clone https://github.com/papago2355/pharma-agent.git
 cd pharma-agent
 ln -s "$PWD/skills/korean-multiturn-rag" ~/.claude/skills/korean-multiturn-rag
-
-# verify the harness sees it
-ls -la ~/.claude/skills/korean-multiturn-rag/SKILL.md
 ```
 
-After symlinking, restart your Claude Code session. The skill's
-`description` triggers on Korean multi-turn RAG topics ("X만", "그럼 X는",
-"followup broadens", etc.) and Claude Code auto-loads it.
+Restart Claude Code. The skill's trigger keywords
+(`X만` / `그럼 X는` / `더 보여줘` / `followup broadens` / `정보 없음`…)
+auto-load it whenever they appear in your session.
 
-**For Codex / Copilot CLI / other harnesses**: same symlink pattern into
-that harness's skill directory (check its docs for the path).
+**Codex / Copilot CLI**: same symlink pattern into that harness's
+skill directory. **No harness?** Read
+[`SKILL.md`](skills/korean-multiturn-rag/SKILL.md) as a checklist and
+copy the patterns into your own system prompts.
 
-**No harness?** Just read [`skills/korean-multiturn-rag/SKILL.md`](skills/korean-multiturn-rag/SKILL.md)
-as a field-guide checklist and apply the patterns by hand into your own
-system prompts.
-
-**Run the benchmarks to see what the skill measurably changes** (and
-doesn't — we're honest about it):
+### 3 · Run the benchmark
 
 ```bash
 cd skills/korean-multiturn-rag/benchmarks/behavioral
 pip install -r requirements.txt
 export ANTHROPIC_API_KEY=...
-pytest -v
+pytest -v                                 # full matrix, both conditions
+pytest -v -k "l01 or l02 or l03"          # just long-horizon
+BENCHMARK_MODEL=claude-sonnet-4-6 pytest  # different model
 ```
 
-## Status
+See [`benchmarks/behavioral/README.md`](skills/korean-multiturn-rag/benchmarks/behavioral/README.md)
+for the full harness design.
 
-Early. The docs are being ported from production notes. PRs welcome with your own
-failure modes, especially if you can pair a symptom with the specific fix that
-worked.
+---
+
+## Who this is for
+
+- Engineers **building** a Korean conversational RAG (customer
+  support, legal research, pharma QMS, public-sector Q&A, insurance
+  claims, any retrieval-grounded bot that speaks Korean).
+- Teams whose bot works beautifully for the first 3 turns and
+  silently degrades after that.
+- Anyone debugging an agent whose **thinking log looks smarter than
+  its final answer**.
+- Regulated-industry engineers who need **auditable citations**, not
+  just plausible ones.
+
+Not for: toy chatbots, English-only deployments, free-chat assistants
+without a retrieval backend.
+
+---
+
+## The non-obvious things this repo teaches
+
+- **Why** a followup like "고형제만" returns *5,529 unrelated records
+  instead of the 11 the user was looking at* — and the exact prompt
+  rule that prevents it.
+- **Why** your verifier flags correct multi-turn answers as
+  hallucinations, and how a separate `prior_context` block with its
+  own token budget fixes it.
+- **Why** `if "만" in query` silently breaks on 만성, 만료, 만족,
+  만약 — and what to replace it with.
+- **Why** a persistent filter like "바이오 제외" silently drops at
+  turn 8 when the user says "전체 다시" (the `전체` ambiguity bug),
+  and the classification rule that survives 13 turns in production.
+- **Why** an auditor-grade citation needs *three* fields, not one.
+- **How to actually test a skill** — live tool-use loop with mock
+  retrieval, not subagent recall theater.
+
+Each claim comes with either a doc chapter explaining the mechanism,
+a benchmark scenario demonstrating it, or both.
+
+---
+
+## Contributing
+
+PRs welcome. The kind that help most:
+
+- **New failure modes** paired with a reproducible scenario
+  (short or long-horizon).
+- **Additional models** in the benchmark matrix (Sonnet, Opus,
+  Haiku 3.5, OpenAI-compatible endpoints for OSS models).
+- **Translations** — the docs are EN + KO; if your team runs in JP,
+  ZH, or VI, the patterns largely transfer and we'd love the coverage.
+- **Anti-examples** — if you find a scenario where our skill makes
+  things *worse*, that's a first-class contribution.
+
+All examples in this repo use fictional mock names (`MOCK-SOP-NNN`,
+`DEV-XX`, `팀-A/B/C`, `A정`, `B캡슐`, …). No proprietary or
+company-specific identifiers. PRs that add real production data will
+be rejected.
+
+---
 
 ## License
 
