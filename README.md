@@ -44,11 +44,21 @@ baseline already handles natively, which the skill still can't fix —
 in
 [`skills/korean-multiturn-rag/benchmarks/results/behavioral/`](skills/korean-multiturn-rag/benchmarks/results/behavioral/).
 
-**Honest caveat we won't hide:** on the short (2–3 turn) suite and on
-two of three long-horizon scenarios, the skill's delta is zero —
-Haiku 4.5 already handles those patterns. The value is concentrated
-in long-horizon state management (see L01) and likely much larger on
-smaller models (cross-model testing is a planned next step).
+**The benchmark isn't a toy**: 14 scenarios total, graduating from
+2-turn sanity checks up to **12- and 13-turn long-horizon conversations**
+with checkpoint assertions at critical turns. Short scenarios catch
+single-pattern failures; long-horizon scenarios expose state decay,
+sticky-filter drop, referential decay, and late-turn sycophancy — the
+failure regimes that actually break Korean chatbots in production
+(one of the real user traces we drew from broke at turn 14 with an
+empty response).
+
+**Honest caveat we won't hide:** on Haiku 4.5, the shorter scenarios
+pass in both conditions (baseline already handles them) and two of
+three long-horizon scenarios also pass the baseline. The skill's
+measurable value is concentrated in long-horizon state management (see
+L01) and likely much larger on smaller models — cross-model testing
+via vLLM is a planned next step.
 
 ---
 
