@@ -1,6 +1,6 @@
 ---
 name: korean-multiturn-rag
-description: Short field-guide snippets for engineers BUILDING a Korean-language multi-turn chatbot — followup handling, session state, particle stripping, verifier cross-turn context, hedge-phrase regression, LLM-over-regex routing, persistent-filter disambiguation. Triggers on Korean followups like "X만", "그럼 X는", "더 보여줘", "2번째 문서", or symptoms like "followup broadens instead of filtering" / "verifier flags correct multi-turn answer" / "retrieval looks fine but answer says 정보 없음". This is reference material for the builder, not an inference-time behavior shaper — see benchmarks/ for what it does and doesn't measurably change.
+description: Short field-guide snippets for engineers BUILDING a Korean-language multi-turn chatbot — followup handling, session state, particle stripping, verifier cross-turn context, hedge-phrase regression, LLM-over-regex routing, persistent-filter disambiguation. Patterns originally distilled from Korean pharma production traces; content itself is domain-neutral and applies to any Korean multi-turn RAG (customer support, legal, finance, public sector, medical, e-commerce). Triggers on Korean followups like "X만", "그럼 X는", "더 보여줘", "2번째 문서", or symptoms like "followup broadens instead of filtering" / "verifier flags correct multi-turn answer" / "retrieval looks fine but answer says 정보 없음". Reference material for the builder, not an inference-time behavior shaper — see benchmarks/ for what it does and doesn't measurably change.
 ---
 
 # Korean multi-turn RAG
