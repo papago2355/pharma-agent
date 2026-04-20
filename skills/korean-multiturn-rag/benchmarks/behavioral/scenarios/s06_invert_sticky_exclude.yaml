@@ -1,0 +1,67 @@
+# Sticky exclude gets INVERTED: user sets "바이오 제외" on turn 2, then
+# on turn 3 explicitly asks for "바이오만". The agent must recognize
+# that "이번에는 바이오만" countermands the sticky exclude rather than
+# keeping it active and returning empty.
+
+name: invert_sticky_exclude
+domain: pharma_qms_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical QMS assistant. Respond in Korean.
+
+tools:
+  - name: search_deviations
+    description: >-
+      Search structured deviation / CAPA records.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+        exclude_teams:
+          type: array
+          items: {type: string}
+      required: [query]
+
+mock:
+  # Match any search_deviations call — Haiku phrases queries variably
+  # ("최근", "최근 일탈", "일탈" etc.) and a brittle substring match on a
+  # single phrase produces empty results that mask the real skill behavior.
+  - tool: search_deviations
+    returns:
+      total: 10
+      records:
+        - {id: "DEV-301", title: "A정 제조 일탈",  team: "합성1팀",   grade: "Minor"}
+        - {id: "DEV-302", title: "B정 제조 일탈",  team: "합성1팀",   grade: "Minor"}
+        - {id: "DEV-303", title: "C항체 원액 일탈", team: "바이오1팀", grade: "Major"}
+        - {id: "DEV-304", title: "D항체 정제 일탈", team: "바이오2팀", grade: "Major"}
+        - {id: "DEV-305", title: "E정 포장 일탈",  team: "포장팀",   grade: "Minor"}
+        - {id: "DEV-306", title: "F캡슐 코팅 일탈", team: "합성2팀",   grade: "Minor"}
+        - {id: "DEV-307", title: "G주 충전 일탈",  team: "주사제팀",  grade: "Major"}
+        - {id: "DEV-308", title: "H항체 정제 일탈", team: "바이오1팀", grade: "Major"}
+        - {id: "DEV-309", title: "I정 품질 일탈",  team: "품질팀",   grade: "Minor"}
+        - {id: "DEV-310", title: "J시럽 제조 일탈", team: "합성2팀",   grade: "Minor"}
+
+turns:
+  - user: "최근 일탈 보여줘"
+    expect:
+      tool_called: search_deviations
+      tool_params_contain: {query: "최근 일탈"}
+      answer_contains: ["DEV-303"]  # should include bio records on turn 1
+
+  - user: "바이오 부서는 빼고 보여줘"
+    expect:
+      # Subset filter excluding bio teams. Prior rows are filterable.
+      # Either re-call with exclude_teams OR filter in place; both OK.
+      # MUST NOT show DEV-303, DEV-304, DEV-308 (bio team items).
+      answer_not_contains: ["DEV-303", "DEV-304", "DEV-308"]
+      answer_contains_any: ["DEV-301", "DEV-302", "DEV-305", "DEV-306", "DEV-307", "DEV-309", "DEV-310"]
+
+  - user: "이번에는 바이오만 추려봐"
+    expect:
+      # CRITICAL: "이번에는 ~만" INVERTS the prior exclude. User now
+      # wants ONLY bio records — the sticky exclude must be dropped
+      # or flipped. Must show bio records, not keep the exclude.
+      answer_contains: ["바이오"]
+      answer_contains_any: ["DEV-303", "DEV-304", "DEV-308"]
+      # Must not be empty or a no-results refusal.
+      answer_not_contains: ["관련 정보를 찾을 수 없습니다", "결과가 없습니다"]

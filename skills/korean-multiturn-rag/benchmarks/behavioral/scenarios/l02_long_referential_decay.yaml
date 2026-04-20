@@ -1,0 +1,122 @@
+# L02 — referential decay across 13 turns.
+#
+# User establishes a named list early (T1). Many intervening turns on
+# different topics. At T12 user says "아까 맨 처음에 보여줬던 X 리스트
+# 중 N번째 거" — must resolve to the correct item from T1 despite 10
+# turns of noise.
+#
+# This is the classic multi-turn failure mode: the agent confuses the
+# most-recent list with the originally-referenced one.
+#
+# NOTE: all IDs and titles are fictional mockups.
+
+name: long_referential_decay
+domain: pharma_sop_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical SOP assistant. Respond in Korean.
+
+tools:
+  - name: search_sop
+    description: Search SOP documents.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+      required: [query]
+  - name: get_stats
+    description: Get aggregate statistics.
+    input_schema:
+      type: object
+      properties:
+        metric: {type: string}
+      required: [metric]
+
+mock:
+  - tool: search_sop
+    when: {query: "무균실"}
+    returns:
+      total: 3
+      records:
+        - {doc_no: "MOCK-SOP-410", title: "무균실 출입 방법서 — 라인 A"}
+        - {doc_no: "MOCK-SOP-411", title: "무균실 출입 방법서 — 라인 B"}
+        - {doc_no: "MOCK-SOP-412", title: "무균실 출입 방법서 — 라인 C"}
+  - tool: search_sop
+    when: {query: "변경관리"}
+    returns:
+      total: 4
+      records:
+        - {doc_no: "MOCK-SOP-501", title: "변경관리 기본 방법서"}
+        - {doc_no: "MOCK-SOP-502", title: "제품표준서 개정 방법서"}
+        - {doc_no: "MOCK-SOP-503", title: "마스터 기록서 변경 방법서"}
+        - {doc_no: "MOCK-SOP-504", title: "승인 절차 방법서"}
+  - tool: search_sop
+    when: {query: "교정"}
+    returns:
+      total: 2
+      records:
+        - {doc_no: "MOCK-SOP-601", title: "교정 관리 방법서"}
+        - {doc_no: "MOCK-SOP-602", title: "측정 장비 관리 방법서"}
+  - tool: search_sop
+    when: {query: "원료"}
+    returns:
+      total: 3
+      records:
+        - {doc_no: "MOCK-SOP-701", title: "원료 입고 관리 방법서"}
+        - {doc_no: "MOCK-SOP-702", title: "원료 소분 방법서"}
+        - {doc_no: "MOCK-SOP-703", title: "원료 보관 방법서"}
+  - tool: search_sop
+    returns:
+      total: 2
+      records:
+        - {doc_no: "MOCK-SOP-901", title: "일반 관리 방법서"}
+        - {doc_no: "MOCK-SOP-902", title: "품질 관리 방법서"}
+  - tool: get_stats
+    returns:
+      metric: "total_sops"
+      value: 1247
+
+turns:
+  # T1 — establish the original list
+  - user: "무균실 관련 SOP 리스트 보여줘"
+    expect:
+      tool_called: search_sop
+      tool_params_contain: {query: "무균실"}
+      answer_contains: ["MOCK-SOP-410", "MOCK-SOP-411", "MOCK-SOP-412"]
+
+  # T2 — zoom in briefly
+  - user: "그 중 라인 B 문서에 대해 한 줄로 요약해줘"
+    expect:
+      answer_contains: ["MOCK-SOP-411"]
+
+  # T3–T11 — drift turns, 9 unrelated queries
+  - user: "변경관리 SOP 찾아줘"
+    expect: {}
+  - user: "그 중 승인 절차 포함한 거"
+    expect: {}
+  - user: "교정 관리 관련 SOP는?"
+    expect: {}
+  - user: "측정 장비 관리 SOP도 있어?"
+    expect: {}
+  - user: "원료 관리 SOP 리스트"
+    expect: {}
+  - user: "원료 입고 절차 요약"
+    expect: {}
+  - user: "우리 회사 SOP 총 몇 건이야?"
+    expect: {}
+  - user: "개정 주기는 보통 어떻게 돼?"
+    expect: {}
+  - user: "개정 이력 관리는 누가 해?"
+    expect: {}
+
+  # T12 — KEY ASSERT: reference back to the T1 list after 10 turns of noise
+  - user: "아까 맨 처음에 보여줬던 무균실 SOP 리스트 중에 첫번째 거 다시 한번만 이름 알려줘"
+    expect:
+      # Must resolve to MOCK-SOP-410 from T1, the FIRST item of the original list
+      answer_contains: ["MOCK-SOP-410"]
+      # Must NOT confuse with recent lists (교정, 원료, 변경관리)
+      answer_not_contains: ["MOCK-SOP-501", "MOCK-SOP-601", "MOCK-SOP-701"]
+
+  # T13 — close
+  - user: "맞네, 고마워"
+    expect: {}

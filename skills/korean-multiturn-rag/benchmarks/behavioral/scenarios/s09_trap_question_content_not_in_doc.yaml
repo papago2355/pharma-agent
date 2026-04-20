@@ -1,0 +1,78 @@
+# Trap question: user asks about topic Y inside Doc A, but Y lives in
+# Doc B. The agent MUST explicitly say "Doc A doesn't cover Y; see
+# Doc B" — NOT hallucinate content, NOT silently pull from Doc B while
+# naming Doc A.
+#
+# Maps to the skill's "three answer shapes" pattern — the correct
+# answer shape here is HEDGE with a pointer to the right document.
+#
+# NOTE: all document IDs, titles, zone codes, and team names below are
+# fictional mockups for testing purposes.
+
+name: trap_question_content_not_in_named_doc
+domain: pharma_sop_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical SOP assistant. Respond in Korean.
+
+tools:
+  - name: get_sop
+    description: >-
+      Retrieve a SOP document by number. Returns its table of contents
+      and scope.
+    input_schema:
+      type: object
+      properties:
+        doc_no: {type: string}
+      required: [doc_no]
+
+mock:
+  - tool: get_sop
+    when: {doc_no: "MOCK-SOP-501"}
+    returns:
+      doc_no: "MOCK-SOP-501"
+      title: "무균 구역 출입 방법서"
+      scope: "무균 구역(Grade B) 출입 및 무균 복장 착용/탈의 절차만 규정"
+      toc:
+        - "1. 목적"
+        - "2. 적용 범위 — Grade B 무균 구역"
+        - "3. 무균 구역 입실 절차"
+        - "4. 무균 구역 내 탈의/갱의 절차"
+        - "5. 무균 구역 퇴실 절차"
+      covers_cnc_egress: false
+      pointer_for_cnc_egress: "작업장 외부로의 퇴실 절차는 MOCK-SOP-502 (작업장 출입 방법서) 5.4항 참조"
+  - tool: get_sop
+    when: {doc_no: "MOCK-SOP-502"}
+    returns:
+      doc_no: "MOCK-SOP-502"
+      title: "작업장 출입 방법서"
+      scope: "작업장 전체(로비, 일반 구역, 준비 구역) 출입 및 퇴실 절차 포괄"
+      toc:
+        - "5.1 입실 절차"
+        - "5.2 준비 구역 절차"
+        - "5.4 일반 구역에서 외부로의 퇴실 절차"
+
+turns:
+  - user: "MOCK-SOP-501 문서가 다루는 범위 알려줘"
+    expect:
+      tool_called: get_sop
+      tool_params_contain: {doc_no: "MOCK-SOP-501"}
+      answer_contains: ["무균 구역"]
+
+  - user: "그럼 그 문서에서 일반 구역에서 외부로 나가는 퇴실 절차를 설명해줘"
+    expect:
+      # CRITICAL: must explicitly say this doc doesn't cover that topic
+      # and point to MOCK-SOP-502. MUST NOT fabricate procedural steps.
+      answer_contains: ["MOCK-SOP-502"]
+      answer_contains_any:
+        - "포함되어 있지 않"
+        - "규정되어 있지 않"
+        - "다루지 않"
+        - "확인되지 않"
+        - "명시되어 있지 않"
+        - "해당 내용이 없"
+      # Should avoid fabricating concrete step-by-step procedures since
+      # neither doc's mock includes step text here.
+      answer_not_contains:
+        - "무진화를 벗어"
+        - "신발장에 넣"

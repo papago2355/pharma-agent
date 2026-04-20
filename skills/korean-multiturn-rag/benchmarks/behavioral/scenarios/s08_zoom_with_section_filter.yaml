@@ -1,0 +1,68 @@
+# Pattern: zoom into ONE specific document from the prior list AND
+# extract a SPECIFIC section only. Tests positional reference to the
+# prior list plus sectional filtering within the chosen document.
+#
+# NOTE: All document IDs, titles, facility codes, and team names below
+# are fictional mockups for testing purposes. No real company or SOP
+# is referenced.
+
+name: zoom_into_prior_with_section_filter
+domain: pharma_sop_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical SOP assistant. Respond in Korean.
+
+tools:
+  - name: search_sop
+    description: >-
+      Search SOP documents and return top matches with metadata.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+      required: [query]
+  - name: get_sop_section
+    description: >-
+      Fetch a specific section of a SOP document by doc_no and section keyword.
+    input_schema:
+      type: object
+      properties:
+        doc_no: {type: string}
+        section: {type: string}
+      required: [doc_no]
+
+mock:
+  - tool: search_sop
+    returns:
+      total: 3
+      records:
+        - {doc_no: "MOCK-SOP-401", title: "무균실 출입 방법서 — 라인 A", version: 4, effective: "2025.09.01"}
+        - {doc_no: "MOCK-SOP-402", title: "무균실 출입 방법서 — 라인 B", version: 7, effective: "2025.10.15"}
+        - {doc_no: "MOCK-SOP-403", title: "무균실 출입 방법서 — 라인 C", version: 2, effective: "2026.01.20"}
+  - tool: get_sop_section
+    when: {doc_no: "MOCK-SOP-403"}
+    returns:
+      doc_no: "MOCK-SOP-403"
+      section: "퇴실 절차"
+      content: |
+        1. 전실-A → 전실-B → 탈의실 순으로 이동
+        2. 2차 장갑 및 고글 제거
+        3. 덧신 제거
+        4. 무균복 및 모자 탈의
+        5. 마스크 및 1차 장갑 제거
+        6. 2차 덧신을 바닥에 닿지 않도록 벗어 수거함에 투입
+        7. 1차 덧신 제거 후 퇴실
+
+turns:
+  - user: "무균실 관련 SOP 문서 리스트 보여줘"
+    expect:
+      tool_called: search_sop
+      answer_contains: ["MOCK-SOP-401", "MOCK-SOP-402", "MOCK-SOP-403"]
+
+  - user: "방금 찾은 것 중 라인 C 문서의 퇴실 절차만 자세히 설명해줘"
+    expect:
+      # Must zoom into MOCK-SOP-403 (the 라인 C one) AND restrict content to 퇴실
+      answer_contains: ["MOCK-SOP-403"]
+      answer_contains_any: ["퇴실", "탈의"]
+      # Must not describe the other two unrelated docs on this turn
+      answer_not_contains: ["MOCK-SOP-401", "MOCK-SOP-402"]

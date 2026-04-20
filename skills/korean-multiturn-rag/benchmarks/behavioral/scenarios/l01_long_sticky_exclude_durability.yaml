@@ -1,0 +1,118 @@
+# L01 — sticky exclude durability across 13 turns.
+#
+# User sets "바이오 부서 제외" early; across many intervening turns
+# (topic shifts, stats queries, subset filters) the exclude MUST stay
+# applied. Then late in the conversation user explicitly revokes it
+# ("바이오도 포함해서") and the exclude MUST drop.
+#
+# Assertions fire only at checkpoint turns (T2 set, T8 durability,
+# T12 revoke). Intervening turns are state-accumulating noise.
+#
+# NOTE: all IDs, team names, and codes are fictional mockups.
+
+name: long_sticky_exclude_durability
+domain: pharma_qms_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical QMS assistant. Respond in Korean.
+
+tools:
+  - name: search_deviations
+    description: Search deviation (일탈) records.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+      required: [query]
+  - name: search_sop
+    description: Search SOP documents.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+      required: [query]
+
+mock:
+  # Deviations: mix of teams including one "바이오" team that should be excluded later.
+  - tool: search_deviations
+    returns:
+      total: 20
+      records:
+        - {id: "DEV-L01", team: "팀-A",   grade: "Major", state: "종결", topic: "원료 이물",     date: "2026-04-01"}
+        - {id: "DEV-L02", team: "팀-A",   grade: "Minor", state: "종결", topic: "포장 불량",     date: "2026-04-02"}
+        - {id: "DEV-L03", team: "팀-A",   grade: "Minor", state: "진행", topic: "기록 오기입",   date: "2026-04-03"}
+        - {id: "DEV-L04", team: "팀-B",   grade: "Major", state: "종결", topic: "원료 이물",     date: "2026-04-04"}
+        - {id: "DEV-L05", team: "팀-B",   grade: "Minor", state: "종결", topic: "청정도",         date: "2026-04-05"}
+        - {id: "DEV-L06", team: "팀-B",   grade: "Minor", state: "진행", topic: "검사",           date: "2026-04-06"}
+        - {id: "DEV-L07", team: "팀-C",   grade: "Major", state: "종결", topic: "청정도",         date: "2026-04-07"}
+        - {id: "DEV-L08", team: "팀-C",   grade: "Minor", state: "종결", topic: "기록 오기입",   date: "2026-04-08"}
+        - {id: "DEV-L09", team: "팀-Bio", grade: "Major", state: "종결", topic: "원액 오염",     date: "2026-04-09"}
+        - {id: "DEV-L10", team: "팀-Bio", grade: "Minor", state: "진행", topic: "정제 공정",     date: "2026-04-10"}
+        - {id: "DEV-L11", team: "팀-Bio", grade: "Major", state: "종결", topic: "원액 오염",     date: "2026-04-11"}
+        - {id: "DEV-L12", team: "팀-A",   grade: "Major", state: "진행", topic: "원료 이물",     date: "2026-04-12"}
+        - {id: "DEV-L13", team: "팀-C",   grade: "Minor", state: "종결", topic: "청정도",         date: "2026-04-13"}
+        - {id: "DEV-L14", team: "팀-Bio", grade: "Minor", state: "진행", topic: "정제 공정",     date: "2026-04-14"}
+        - {id: "DEV-L15", team: "팀-A",   grade: "Minor", state: "종결", topic: "검사",           date: "2026-04-15"}
+        - {id: "DEV-L16", team: "팀-B",   grade: "Major", state: "종결", topic: "원료 이물",     date: "2026-04-16"}
+        - {id: "DEV-L17", team: "팀-C",   grade: "Minor", state: "진행", topic: "포장 불량",     date: "2026-04-17"}
+        - {id: "DEV-L18", team: "팀-Bio", grade: "Major", state: "종결", topic: "원액 오염",     date: "2026-04-18"}
+        - {id: "DEV-L19", team: "팀-A",   grade: "Minor", state: "종결", topic: "검사",           date: "2026-04-19"}
+        - {id: "DEV-L20", team: "팀-B",   grade: "Minor", state: "종결", topic: "청정도",         date: "2026-04-20"}
+  # SOPs: generic — for the mid-conversation topic shift about change control.
+  - tool: search_sop
+    returns:
+      total: 4
+      records:
+        - {doc_no: "MOCK-SOP-301", title: "변경관리 방법서"}
+        - {doc_no: "MOCK-SOP-302", title: "제품표준서 작성 및 관리 방법서"}
+        - {doc_no: "MOCK-SOP-303", title: "마스터 제조 기록서 운영 방법서"}
+        - {doc_no: "MOCK-SOP-304", title: "제조기록서 검토 및 승인 방법서"}
+
+turns:
+  # T1 — initial retrieval
+  - user: "최근 일탈 기록 보여줘"
+    expect:
+      tool_called: search_deviations
+      answer_contains: ["DEV-L01"]
+
+  # T2 — establish sticky exclude
+  - user: "바이오 부서는 제외하고 보여줘"
+    expect:
+      # bio records must not appear
+      answer_not_contains: ["DEV-L09", "DEV-L10", "DEV-L11", "DEV-L14", "DEV-L18"]
+
+  # T3–T7 — context-accumulation turns, no strict assertions
+  - user: "Major 등급은 몇 건이야?"
+    expect: {}
+  - user: "팀-A 건만 좁혀줘"
+    expect: {}
+  - user: "그 중 종결된 것만"
+    expect: {}
+  - user: "완전히 다른 주제인데, 변경관리 SOP 찾아줘"
+    expect: {}
+  - user: "그 중 제품표준서 관련된 것"
+    expect: {}
+
+  # T8 — KEY ASSERT: back to deviations, bio still excluded
+  - user: "다시 일탈 이야기로 돌아가서, 이번 달 전체 기록 다시 보여줘"
+    expect:
+      # After 5 unrelated intervening turns, bio must still be excluded
+      answer_not_contains: ["DEV-L09", "DEV-L10", "DEV-L11", "DEV-L14", "DEV-L18"]
+
+  # T9–T11 — more drift
+  - user: "가장 많이 나온 topic은?"
+    expect: {}
+  - user: "Minor 등급만 정리"
+    expect: {}
+  - user: "팀별 분포 알려줘"
+    expect: {}
+
+  # T12 — KEY ASSERT: user EXPLICITLY revokes the sticky exclude
+  - user: "아 그럼 이번엔 바이오도 포함해서 다시 전체 정리해줘"
+    expect:
+      # Bio records must now appear
+      answer_contains_any: ["DEV-L09", "DEV-L10", "DEV-L11", "DEV-L14", "DEV-L18"]
+
+  # T13 — close
+  - user: "고마워"
+    expect: {}

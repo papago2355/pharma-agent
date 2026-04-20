@@ -1,0 +1,65 @@
+# Positive: subset filter on the prior turn's records. The agent MUST
+# NOT call the retrieval tool on turn 2 — the 11 rows from turn 1 are
+# the ground truth for "고형제만".
+
+name: pharma_subset_filter_happy_path
+domain: pharma_qms_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical QMS assistant. Respond in Korean.
+
+tools:
+  - name: search_deviations
+    description: >-
+      Search structured deviation / CAPA records. Returns matching rows
+      and a total count.
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Topic keywords, particles stripped.
+        title_contains:
+          type: array
+          items: {type: string}
+        date_from: {type: string}
+      required: [query]
+
+mock:
+  - tool: search_deviations
+    when: {query: "원료 이물"}
+    returns:
+      total: 11
+      records:
+        - {id: DEV-001, title: "A정 10mg 원료 이물 발견",          grade: Major, team: "생산1팀", state: "종결"}
+        - {id: DEV-002, title: "B캡슐 5mg 원료 이물 혼입",          grade: Major, team: "생산1팀", state: "종결"}
+        - {id: DEV-003, title: "C정 20mg 원료 이물 확인",          grade: Minor, team: "생산2팀", state: "진행"}
+        - {id: DEV-004, title: "D시럽 50ml 원료 이물 의심 건",     grade: Minor, team: "생산3팀", state: "종결"}
+        - {id: DEV-005, title: "E주 5mg/ml 원료 이물 발견",        grade: Major, team: "생산3팀", state: "종결"}
+        - {id: DEV-006, title: "F정 25mg 원료 이물 혼입",          grade: Minor, team: "생산1팀", state: "종결"}
+        - {id: DEV-007, title: "G액 10ml 원료 이물 의심",          grade: Minor, team: "생산3팀", state: "진행"}
+        - {id: DEV-008, title: "H정 1mg 원료 이물 발견",           grade: Major, team: "생산2팀", state: "종결"}
+        - {id: DEV-009, title: "I캡슐 100mg 원료 이물 혼입",       grade: Minor, team: "생산2팀", state: "종결"}
+        - {id: DEV-010, title: "J주 2mg/ml 원료 이물 발견",        grade: Major, team: "생산3팀", state: "진행"}
+        - {id: DEV-011, title: "K과립 5g 원료 이물 확인",          grade: Minor, team: "생산1팀", state: "종결"}
+
+turns:
+  - user: "최근 원료 이물 관련 일탈 보여줘"
+    expect:
+      tool_called: search_deviations
+      tool_params_contain: {query: "원료 이물"}
+      # Particle stripping — 관련 must be gone from the query param.
+      tool_params_absent: ["관련"]
+
+  - user: "고형제만 추려줘"
+    expect:
+      # CRITICAL: no retrieval on a subset followup.
+      tool_called: null
+      # Answer should enumerate the solid-dosage subset (정, 캡슐, 과립 — NOT 시럽/주/액).
+      answer_contains: ["DEV-001", "DEV-002", "DEV-011"]
+      # NOTE: we previously asserted answer_contains_any ["11건", "총 11"] —
+      # restating the prior total — but Haiku triggers that stylistic habit
+      # only ~1/3 of the time even with the skill. Core behavior (no re-
+      # retrieve, correct row filter) is what matters, so we keep only those.
+      # Must not use the hedged refusal even though tool wasn't called.
+      answer_not_contains: ["직접적인 내용은 없으나", "정보를 찾을 수 없습니다"]

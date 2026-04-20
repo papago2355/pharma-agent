@@ -1,0 +1,49 @@
+# Anti-reference: "그거 말고 다른거 말해봐" — user wants the NEXT item,
+# explicitly NOT the one just shown. Agent must use `last_shown_documents`
+# to exclude the prior hit and pick a different one.
+#
+# v2 note: v1 was a rubric bug — Haiku picked the most-recent complaint
+# as "top" instead of the first-in-list. Now we make the user's turn-1
+# request unambiguous ("가장 심각한 건") and mock COMP-101 as severity
+# critical so there's only one reasonable "top" across samples.
+
+name: anti_reference_show_different
+domain: pharma_qms_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical QMS assistant. Respond in Korean.
+
+tools:
+  - name: search_complaints
+    description: >-
+      Search consumer complaint records.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+      required: [query]
+
+mock:
+  - tool: search_complaints
+    returns:
+      total: 4
+      records:
+        - {id: "COMP-101", title: "B캡슐 5mg 이물 혼입 불만", received: "2026-04-15", severity: "critical", detail: "복용 중 금속편 발견 — 환자 구강 상처"}
+        - {id: "COMP-102", title: "C정 20mg 포장 이상 불만", received: "2026-03-20", severity: "low",    detail: "포장지 찢어짐"}
+        - {id: "COMP-103", title: "D시럽 50ml 맛 이상 불만",  received: "2026-04-02", severity: "medium", detail: "쓴맛 강함 보고 3건"}
+        - {id: "COMP-104", title: "E주 5mg/ml 멍 발생 불만",  received: "2026-04-10", severity: "low",    detail: "주사 부위 멍 보고"}
+
+turns:
+  - user: "최근 소비자 불만 중 가장 심각한 건 하나 자세히 알려줘"
+    expect:
+      tool_called: search_complaints
+      # Must pick the severity=critical item (COMP-101) and mention it by ID
+      answer_contains: ["COMP-101"]
+
+  - user: "그거 말고 다른거 말해봐"
+    expect:
+      # CRITICAL: must NOT repeat COMP-101.
+      # Must NOT silently re-retrieve and return the same top result.
+      # Acceptable: pick COMP-102, 103, or 104 from prior list.
+      answer_not_contains: ["COMP-101"]
+      answer_contains_any: ["COMP-102", "COMP-103", "COMP-104"]

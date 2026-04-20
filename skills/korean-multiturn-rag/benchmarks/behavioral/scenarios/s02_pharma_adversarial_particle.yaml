@@ -1,0 +1,58 @@
+# Adversarial: the particle 만 appears inside 만성 (chronic). A regex
+# router would mis-fire and treat this as a subset_filter. The correct
+# behavior is a fresh retrieval — this is a brand-new topic.
+
+name: pharma_adversarial_particle_in_stem
+domain: pharma_qms_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical QMS assistant. Respond in Korean.
+
+tools:
+  - name: search_deviations
+    description: >-
+      Search structured deviation / CAPA records.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+        title_contains:
+          type: array
+          items: {type: string}
+      required: [query]
+
+mock:
+  - tool: search_deviations
+    when: {query: "불량"}
+    returns:
+      total: 6
+      records:
+        - {id: DEV-101, title: "A정 10mg 포장 불량",  grade: Minor, team: "포장팀", state: "종결"}
+        - {id: DEV-102, title: "B캡슐 5mg 라벨 불량", grade: Minor, team: "포장팀", state: "종결"}
+        - {id: DEV-103, title: "C정 20mg 외관 불량",  grade: Minor, team: "품질팀", state: "진행"}
+        - {id: DEV-104, title: "D시럽 50ml 용기 불량", grade: Major, team: "포장팀", state: "종결"}
+        - {id: DEV-105, title: "E주 5mg/ml 주사기 불량", grade: Major, team: "품질팀", state: "진행"}
+        - {id: DEV-106, title: "F과립 5g 봉지 밀봉 불량", grade: Minor, team: "포장팀", state: "종결"}
+  - tool: search_deviations
+    when: {query: "만성"}
+    returns:
+      total: 2
+      records:
+        - {id: DEV-201, title: "만성질환용 X정 표시사항 누락", grade: Minor, team: "품질팀", state: "종결"}
+        - {id: DEV-202, title: "만성 투여 제품 Y캡슐 안정성 일탈", grade: Major, team: "품질팀", state: "진행"}
+
+turns:
+  - user: "최근 포장 불량 일탈 보여줘"
+    expect:
+      tool_called: search_deviations
+      tool_params_contain: {query: "불량"}
+
+  - user: "만성질환 관련된 일탈도 있어?"
+    expect:
+      # CRITICAL: 만성 is a stem, not a particle. This is a topic shift,
+      # NOT a subset_filter. The agent MUST call the tool again.
+      tool_called: search_deviations
+      tool_params_contain: {query: "만성"}
+      # The query passed must not carry the 관련된 particle fragment.
+      tool_params_absent: ["관련된"]
+      answer_contains: ["DEV-201"]

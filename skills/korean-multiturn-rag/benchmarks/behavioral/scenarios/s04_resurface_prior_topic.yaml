@@ -1,0 +1,62 @@
+# Vague reference: "아까 그 말했던거 다시 말해볼래?" resolves to a
+# SPECIFIC prior topic that was discussed turns ago, after unrelated
+# intervening turns. The agent must recall and re-surface it without
+# re-retrieval (retrieval would pick up the MOST RECENT context, not
+# the one the user is pointing back at).
+
+name: resurface_prior_topic_vague_anaphora
+domain: pharma_qms_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical QMS assistant. Respond in Korean.
+
+tools:
+  - name: search_deviations
+    description: >-
+      Search structured deviation / CAPA records.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+        title_contains:
+          type: array
+          items: {type: string}
+      required: [query]
+
+mock:
+  - tool: search_deviations
+    when: {query: "A정"}
+    returns:
+      total: 1
+      records:
+        - {id: "DEV-A01", title: "A정 10mg 원료 이물 발견", grade: "Major", team: "생산1팀", state: "종결", detail: "원료 투입 단계에서 금속 이물 1점 확인"}
+  - tool: search_deviations
+    when: {query: "이번달"}
+    returns:
+      total: 32
+      records:
+        - {id: "DEV-042", title: "10월 포장 공정 일탈", grade: "Minor", team: "포장팀"}
+        - {id: "DEV-043", title: "10월 품질 점검 이상", grade: "Minor", team: "품질팀"}
+
+turns:
+  - user: "A정 10mg 원료 이물 일탈 자세히 알려줘"
+    expect:
+      tool_called: search_deviations
+      tool_params_contain: {query: "A정"}
+      answer_contains: ["DEV-A01"]
+
+  - user: "이번달 전체 일탈은 몇 건이야?"
+    expect:
+      tool_called: search_deviations
+      tool_params_contain: {query: "이번달"}
+      answer_contains_any: ["32건", "총 32"]
+
+  - user: "아까 그 A정 얘기했던 거 다시 한번 말해줘"
+    expect:
+      # CRITICAL: must resolve "아까 그 A정" to the turn-1 content.
+      # Re-calling the tool is acceptable IF it uses "A정" (not "이번달");
+      # but the clean behavior is no tool call — use prior state.
+      answer_contains: ["DEV-A01", "Major"]
+      answer_not_contains: ["DEV-042", "DEV-043", "포장팀"]
+      # If the tool IS called, the query must target A정, not 이번달.
+      tool_params_absent: ["이번달"]

@@ -1,0 +1,51 @@
+# Cross-domain generalization + subset phrasing WITHOUT the literal 만.
+# Domain: Korean e-commerce customer support over an orders table.
+# Turn 2 uses "중에서 … 위주로" — no 만 anywhere — so a regex router
+# that only looks for 만 would misroute. Correct behavior: filter prior
+# orders, no new retrieval.
+
+name: support_subset_filter_no_particle
+domain: ecommerce_customer_support
+
+system_prompt: |
+  You are a Korean customer-support assistant. Respond in Korean.
+
+tools:
+  - name: search_orders
+    description: >-
+      Search the user's order history. Returns matching orders.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+        date_from: {type: string}
+      required: [query]
+
+mock:
+  - tool: search_orders
+    when: {query: "반품"}
+    returns:
+      total: 7
+      records:
+        - {id: ORD-501, status: "반품완료",   amount: 12000,  category: "의류",   date: "2026-03-18"}
+        - {id: ORD-502, status: "반품진행",   amount: 45000,  category: "가전",   date: "2026-03-22"}
+        - {id: ORD-503, status: "반품완료",   amount: 230000, category: "가전",   date: "2026-04-01"}
+        - {id: ORD-504, status: "반품요청",   amount: 8900,   category: "식품",   date: "2026-04-05"}
+        - {id: ORD-505, status: "반품완료",   amount: 78000,  category: "의류",   date: "2026-04-08"}
+        - {id: ORD-506, status: "반품진행",   amount: 155000, category: "가전",   date: "2026-04-10"}
+        - {id: ORD-507, status: "반품완료",   amount: 3500,   category: "식품",   date: "2026-04-12"}
+
+turns:
+  - user: "최근 반품 주문 내역 보여줘"
+    expect:
+      tool_called: search_orders
+      tool_params_contain: {query: "반품"}
+
+  - user: "그 중에서 가전제품 위주로 정리해줘"
+    expect:
+      # CRITICAL: subset filter phrased with 중에서 / 위주로, no 만
+      # anywhere. Regex router would miss this — real router must
+      # recognize semantic subset intent.
+      tool_called: null
+      answer_contains: ["ORD-502", "ORD-503", "ORD-506"]
+      answer_not_contains: ["직접적인 내용은 없으나", "정보를 찾을 수 없습니다"]

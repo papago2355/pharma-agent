@@ -1,0 +1,61 @@
+# "아니, [다른 것]" — user is CORRECTING their intent, not filtering
+# the prior result. The agent must do a FRESH retrieval with the new
+# intent, not filter the prior list. Distinguishing "correction" from
+# "subset filter" is a common multi-turn failure mode.
+#
+# NOTE: all document IDs, titles, and codes below are fictional mockups.
+
+name: correction_replaces_not_filters
+domain: pharma_sop_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical SOP assistant. Respond in Korean.
+
+tools:
+  - name: search_sop
+    description: >-
+      Search SOP documents by keyword.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+      required: [query]
+
+mock:
+  - tool: search_sop
+    when: {query: "이화학 시험"}
+    returns:
+      total: 10
+      records:
+        - {doc_no: "MOCK-SOP-601", title: "시험자 적격성 평가 방법서"}
+        - {doc_no: "MOCK-SOP-602", title: "가스 모니터링 관리 방법서"}
+        - {doc_no: "MOCK-SOP-603", title: "시험실 출입절차 관리 방법서"}
+        - {doc_no: "MOCK-SOP-604", title: "회화로 관리 방법서"}
+        - {doc_no: "MOCK-SOP-605", title: "표준품 관리 방법서"}
+  - tool: search_sop
+    when: {query: "정제 나정"}
+    returns:
+      total: 4
+      records:
+        - {doc_no: "MOCK-SOP-701", title: "붕해도기 관리 방법서 (고형제용)"}
+        - {doc_no: "MOCK-SOP-702", title: "붕해도 측정기 작동 및 관리 방법서"}
+        - {doc_no: "MOCK-SOP-703", title: "시험기준 및 시험방법 관리 방법서 — 고형제"}
+        - {doc_no: "MOCK-SOP-704", title: "용출시험기 관리 방법서"}
+
+turns:
+  - user: "이화학 시험 SOP 좀 찾아줘"
+    expect:
+      tool_called: search_sop
+      tool_params_contain: {query: "이화학"}
+      answer_contains_any: ["MOCK-SOP-601", "MOCK-SOP-602", "MOCK-SOP-603"]
+
+  - user: "아니, 정제 나정 관련해서"
+    expect:
+      # CRITICAL: this is a correction, NOT a filter on prior rows.
+      # The agent MUST do a fresh search with "정제 나정" intent — not
+      # filter the 10 prior rows (none of which are tablet-focused).
+      tool_called: search_sop
+      tool_params_contain: {query: "정제"}
+      answer_contains_any: ["MOCK-SOP-701", "MOCK-SOP-702", "MOCK-SOP-703", "MOCK-SOP-704"]
+      # Should NOT dominantly list the prior 이화학 results
+      answer_not_contains: ["MOCK-SOP-601", "MOCK-SOP-602"]

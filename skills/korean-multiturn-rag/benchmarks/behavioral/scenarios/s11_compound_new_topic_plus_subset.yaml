@@ -1,0 +1,76 @@
+# Compound turn: NEW topic (complaints, not deviations) + subset filter
+# ("고형제만") in a single user utterance. Agent must (a) recognize the
+# topic shift — do a fresh search for complaints — and (b) apply the
+# dosage-form subset on the new results.
+#
+# Failure modes to catch:
+#   - Agent filters the prior DEVIATION rows for 고형제 instead of
+#     doing a new COMPLAINT search.
+#   - Agent does new complaint search but forgets the 고형제 subset,
+#     returning everything.
+#
+# NOTE: all document IDs, titles, and codes below are fictional mockups.
+
+name: compound_new_topic_plus_subset_filter
+domain: pharma_qms_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical QMS assistant. Respond in Korean.
+
+tools:
+  - name: search_deviations
+    description: >-
+      Search deviation (일탈) records.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+      required: [query]
+  - name: search_complaints
+    description: >-
+      Search consumer complaint records.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+      required: [query]
+
+mock:
+  - tool: search_deviations
+    returns:
+      total: 6
+      records:
+        - {id: "DEV-801", title: "A정 원료 이물 발견", team: "팀-A"}
+        - {id: "DEV-802", title: "B시럽 원료 이물 혼입", team: "팀-B"}
+        - {id: "DEV-803", title: "C캡슐 원료 이물 확인", team: "팀-A"}
+        - {id: "DEV-804", title: "D주사액 원료 이물 발견", team: "팀-C"}
+        - {id: "DEV-805", title: "E점안액 원료 이물 발견", team: "팀-C"}
+        - {id: "DEV-806", title: "F과립 원료 이물 확인", team: "팀-A"}
+
+  - tool: search_complaints
+    returns:
+      total: 5
+      records:
+        - {id: "COMP-801", title: "A정 외관 이상 불만",   form: "정"}
+        - {id: "COMP-802", title: "B캡슐 색상 이물 불만", form: "캡슐"}
+        - {id: "COMP-803", title: "C시럽 맛 이상 불만",   form: "시럽"}
+        - {id: "COMP-804", title: "D주사액 이물 발견 불만", form: "주"}
+        - {id: "COMP-805", title: "E과립 봉지 이물 불만", form: "과립"}
+
+turns:
+  - user: "원료 이물 관련 일탈 정리해줘"
+    expect:
+      tool_called: search_deviations
+      answer_contains: ["DEV-801"]
+
+  - user: "이물에 대한 소비자 불만을 정리해줘. 고형제만"
+    expect:
+      # CRITICAL: must run search_complaints (NEW topic — not a subset
+      # of prior deviations) AND apply 고형제 filter (정/캡슐/과립).
+      tool_called: search_complaints
+      # Solid-dosage complaints must appear
+      answer_contains_any: ["COMP-801", "COMP-802", "COMP-805"]
+      # Liquid-dosage complaints must NOT dominate (시럽/주)
+      answer_not_contains: ["COMP-803"]
+      # Must NOT dominantly list prior deviation IDs
+      answer_not_contains: ["DEV-804", "DEV-805"]
