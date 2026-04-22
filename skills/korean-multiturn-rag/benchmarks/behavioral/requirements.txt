@@ -1,3 +1,4 @@
 anthropic>=0.40
+openai>=1.40
 pyyaml>=6.0
 pytest>=8.0

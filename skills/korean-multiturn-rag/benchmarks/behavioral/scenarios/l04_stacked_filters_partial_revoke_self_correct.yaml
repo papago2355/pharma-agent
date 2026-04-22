@@ -1,0 +1,187 @@
+# L04 — Real-world-ish stress test.
+#
+# Stacks THREE persistent filters set across consecutive turns, then
+# tests partial revoke (drop one filter, keep the others) and
+# self-correction (user reverses an earlier instruction mid-conversation).
+# Includes a noise turn and a topic detour with its own subset.
+#
+# Failure modes this stresses (in order of difficulty):
+#   - F1 Partial revoke: "2024년 조건만 풀고 바이오 제외랑 Major는 유지"
+#       — can the model revoke ONE filter while preserving TWO others?
+#   - F2 Self-correction: "아니 잠깐, 바이오도 포함해서 전체 분포로"
+#       — can the model process a mid-conversation reversal without
+#         dropping the other active filter (Major)?
+#   - F3 Long-horizon durability through noise+detour+ambiguous-reset.
+#
+# All IDs, team names, dates, topics are fictional. The record naming
+# scheme is designed to make year / team membership grep-assertable:
+#   DEV-Y23-XXX = 2023 records
+#   DEV-Y24-XXX = 2024 records
+#   *-B## suffix = 팀-Bio
+#
+# NOTE: record IDs below are constructed so that year-filter and
+# bio-filter assertions can be made with answer_contains / answer_not_contains.
+
+name: stacked_filters_partial_revoke_self_correct
+domain: pharma_qms_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical QMS assistant. Respond in Korean.
+  You have tools for deviation search and SOP search. When the user
+  sets a persistent filter (exclude / only / since), honor it on every
+  subsequent turn until the user explicitly revokes it.
+
+tools:
+  - name: search_deviations
+    description: Search deviation (일탈) records. Returns list of structured rows.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+      required: [query]
+  - name: search_sop
+    description: Search SOP documents.
+    input_schema:
+      type: object
+      properties:
+        query: {type: string}
+      required: [query]
+
+mock:
+  # 24 records: 8 in 2023 (mixed teams/grades) + 16 in 2024 (including 4 bio).
+  # Assertion scheme:
+  #   - 2024 A/B/C Major 종결:  DEV-Y24-A01, A02, B01, C01, C02
+  #   - 2024 A/B/C Minor 종결:  DEV-Y24-A03, B02, C03
+  #   - 2024 A Major 진행:       DEV-Y24-A04
+  #   - 2024 팀-Bio records:     DEV-Y24-B01 (Major 종결), DEV-Y24-B02 (Minor 종결),
+  #                              DEV-Y24-B03 (Major 진행), DEV-Y24-B04 (Minor 진행)
+  #   - 2023 records:            DEV-Y23-A01..A03, DEV-Y23-B01, DEV-Y23-C01..C02,
+  #                              DEV-Y23-B01bio (팀-Bio 2023 Major)
+  - tool: search_deviations
+    returns:
+      total: 24
+      records:
+        # 2024 non-bio Major 종결
+        - {id: "DEV-Y24-A01", team: "팀-A", grade: "Major", state: "종결", year: 2024, topic: "원료 이물"}
+        - {id: "DEV-Y24-A02", team: "팀-A", grade: "Major", state: "종결", year: 2024, topic: "원료 이물"}
+        - {id: "DEV-Y24-B01", team: "팀-B", grade: "Major", state: "종결", year: 2024, topic: "청정도"}
+        - {id: "DEV-Y24-C01", team: "팀-C", grade: "Major", state: "종결", year: 2024, topic: "검사"}
+        - {id: "DEV-Y24-C02", team: "팀-C", grade: "Major", state: "종결", year: 2024, topic: "청정도"}
+        # 2024 non-bio Minor 종결
+        - {id: "DEV-Y24-A03", team: "팀-A", grade: "Minor", state: "종결", year: 2024, topic: "포장 불량"}
+        - {id: "DEV-Y24-B02", team: "팀-B", grade: "Minor", state: "종결", year: 2024, topic: "검사"}
+        - {id: "DEV-Y24-C03", team: "팀-C", grade: "Minor", state: "종결", year: 2024, topic: "기록 오기입"}
+        # 2024 non-bio Major 진행
+        - {id: "DEV-Y24-A04", team: "팀-A", grade: "Major", state: "진행", year: 2024, topic: "원료 이물"}
+        # 2024 팀-Bio
+        - {id: "DEV-Y24-B01bio", team: "팀-Bio", grade: "Major", state: "종결", year: 2024, topic: "원액 오염"}
+        - {id: "DEV-Y24-B02bio", team: "팀-Bio", grade: "Minor", state: "종결", year: 2024, topic: "정제 공정"}
+        - {id: "DEV-Y24-B03bio", team: "팀-Bio", grade: "Major", state: "진행", year: 2024, topic: "원액 오염"}
+        - {id: "DEV-Y24-B04bio", team: "팀-Bio", grade: "Minor", state: "진행", year: 2024, topic: "정제 공정"}
+        # 2023 records
+        - {id: "DEV-Y23-A01", team: "팀-A", grade: "Major", state: "종결", year: 2023, topic: "원료 이물"}
+        - {id: "DEV-Y23-A02", team: "팀-A", grade: "Minor", state: "종결", year: 2023, topic: "기록 오기입"}
+        - {id: "DEV-Y23-A03", team: "팀-A", grade: "Major", state: "종결", year: 2023, topic: "검사"}
+        - {id: "DEV-Y23-B01", team: "팀-B", grade: "Minor", state: "종결", year: 2023, topic: "포장 불량"}
+        - {id: "DEV-Y23-C01", team: "팀-C", grade: "Major", state: "종결", year: 2023, topic: "청정도"}
+        - {id: "DEV-Y23-C02", team: "팀-C", grade: "Minor", state: "종결", year: 2023, topic: "검사"}
+        - {id: "DEV-Y23-B01bio", team: "팀-Bio", grade: "Major", state: "종결", year: 2023, topic: "원액 오염"}
+  # SOPs for the mid-conversation detour
+  - tool: search_sop
+    returns:
+      total: 4
+      records:
+        - {doc_no: "MOCK-SOP-301", title: "변경관리 방법서"}
+        - {doc_no: "MOCK-SOP-302", title: "제품표준서 작성 및 관리 방법서"}
+        - {doc_no: "MOCK-SOP-303", title: "마스터 제조 기록서 운영 방법서"}
+        - {doc_no: "MOCK-SOP-304", title: "제조기록서 검토 및 승인 방법서"}
+
+turns:
+  # T1 — initial retrieval, all 24 records
+  - user: "최근 2년 일탈 기록 보여줘"
+    expect:
+      tool_called: search_deviations
+
+  # T2 — set TWO persistent filters in ONE message (multi-intent)
+  - user: "바이오 부서는 제외하고 Major 등급만 추려줘"
+    expect:
+      # bio records must NOT appear, Minor records must NOT appear
+      answer_not_contains:
+        ["DEV-Y24-B01bio", "DEV-Y24-B02bio", "DEV-Y24-B03bio", "DEV-Y24-B04bio",
+         "DEV-Y23-B01bio", "DEV-Y24-A03", "DEV-Y24-B02", "DEV-Y24-C03",
+         "DEV-Y23-A02", "DEV-Y23-B01", "DEV-Y23-C02"]
+
+  # T3 — add THIRD persistent filter (year=2024 only). Now 3 filters active.
+  - user: "그 중 2024년만"
+    expect:
+      # must NOT contain any 2023 records OR any bio records OR any Minor
+      answer_not_contains:
+        ["DEV-Y23-A01", "DEV-Y23-A02", "DEV-Y23-A03", "DEV-Y23-B01",
+         "DEV-Y23-C01", "DEV-Y23-C02", "DEV-Y23-B01bio",
+         "DEV-Y24-B01bio", "DEV-Y24-B02bio", "DEV-Y24-B03bio", "DEV-Y24-B04bio"]
+
+  # T4 — subset on top of the 3 persistent filters
+  - user: "그 중 종결된 것만"
+    expect: {}
+
+  # T5 — NOISE turn + topic detour: filters must persist through this
+  - user: "잠깐, 완전 다른 질문인데 변경관리 SOP 있어?"
+    expect:
+      tool_called: search_sop
+
+  # T6 — subset of T5 SOP result
+  - user: "그 중 제품표준서 관련된 거"
+    expect: {}
+
+  # T7 — KEY ASSERT: AMBIGUOUS return-to-topic. All 3 filters must still be honored.
+  - user: "다시 일탈로 돌아가서, 이번 달 전체 기록 다시 보여줘"
+    expect:
+      # must still exclude bio, Minor, and 2023 records
+      answer_not_contains:
+        ["DEV-Y24-B01bio", "DEV-Y24-B02bio", "DEV-Y24-B03bio", "DEV-Y24-B04bio",
+         "DEV-Y23-A01", "DEV-Y23-B01bio",
+         "DEV-Y24-A03", "DEV-Y24-B02", "DEV-Y24-C03"]
+
+  # T8 — KEY ASSERT: PARTIAL REVOKE. User ONLY names the filter to drop;
+  # must not drop the other two filters by overinterpretation.
+  - user: "2024년 조건만 풀어줘"
+    expect:
+      # At least one 2023-Major-non-bio record must reappear
+      answer_contains_any: ["DEV-Y23-A01", "DEV-Y23-A03", "DEV-Y23-C01"]
+      # But bio must still be excluded AND Minor still excluded
+      answer_not_contains:
+        ["DEV-Y23-B01bio", "DEV-Y24-B01bio",
+         "DEV-Y23-A02", "DEV-Y24-A03", "DEV-Y24-C03"]
+
+  # T9 — analytical, filters must stay active (bio-exclude + Major, no year)
+  - user: "팀별로 몇 건씩이야?"
+    expect: {}
+
+  # T10 — KEY ASSERT: SELF-CORRECTION with natural informal Korean.
+  # Revokes bio-exclude only. Major must REMAIN active.
+  - user: "아 잠깐, 그냥 바이오도 같이 보여줘"
+    expect:
+      # After revoking bio-exclude: at least one Bio-Major record must appear
+      answer_contains_any: ["DEV-Y24-B01bio", "DEV-Y24-B03bio", "DEV-Y23-B01bio"]
+      # Major filter MUST still be honored — no Minor records
+      answer_not_contains:
+        ["DEV-Y24-A03", "DEV-Y24-B02", "DEV-Y24-C03",
+         "DEV-Y23-A02", "DEV-Y23-B01", "DEV-Y23-C02",
+         "DEV-Y24-B02bio", "DEV-Y24-B04bio"]
+
+  # T11 — analytical, confirm Major-only still active across topic-counting
+  - user: "가장 자주 나온 topic은?"
+    expect: {}
+
+  # T12 — KEY ASSERT: FULL REVOKE of the last remaining filter (Major).
+  - user: "이제 Major 조건도 풀고 전체 다 보여줘"
+    expect:
+      # Minor records should now appear
+      answer_contains_any:
+        ["DEV-Y24-A03", "DEV-Y24-B02", "DEV-Y24-C03",
+         "DEV-Y23-A02", "DEV-Y23-B01", "DEV-Y23-C02",
+         "DEV-Y24-B02bio", "DEV-Y24-B04bio"]
+
+  # T13 — close
+  - user: "고마워"
+    expect: {}
