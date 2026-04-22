@@ -1,0 +1,381 @@
+{
+  "model": "google/gemma-4-26B-A4B-it",
+  "runs_per_cell": 5,
+  "wall_time_seconds": 163.2120714187622,
+  "cells": [
+    {
+      "scenario": "l04_stacked_filters_partial_revoke_self_correct",
+      "skill_on": false,
+      "run_idx": 0,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 6,
+          "user_msg": "다시 일탈로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-B01bio'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B03bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 9,
+          "user_msg": "아 잠깐, 그냥 바이오도 같이 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y23-B01'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l04_stacked_filters_partial_revoke_self_correct",
+      "skill_on": false,
+      "run_idx": 1,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 6,
+          "user_msg": "다시 일탈로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-B01bio'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B03bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 7,
+          "user_msg": "2024년 조건만 풀어줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y23-B01bio'",
+            "answer contained forbidden substring 'DEV-Y24-B01bio'",
+            "answer contained forbidden substring 'DEV-Y23-A02'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 9,
+          "user_msg": "아 잠깐, 그냥 바이오도 같이 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'",
+            "answer contained forbidden substring 'DEV-Y23-A02'",
+            "answer contained forbidden substring 'DEV-Y23-B01'",
+            "answer contained forbidden substring 'DEV-Y23-C02'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l04_stacked_filters_partial_revoke_self_correct",
+      "skill_on": false,
+      "run_idx": 3,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 6,
+          "user_msg": "다시 일탈로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-B01bio'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B03bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 7,
+          "user_msg": "2024년 조건만 풀어줘",
+          "failures": [
+            "answer missing at least one of ['DEV-Y23-A01', 'DEV-Y23-A03', 'DEV-Y23-C01']"
+          ]
+        },
+        {
+          "turn_index": 9,
+          "user_msg": "아 잠깐, 그냥 바이오도 같이 보여줘",
+          "failures": [
+            "answer missing at least one of ['DEV-Y24-B01bio', 'DEV-Y24-B03bio', 'DEV-Y23-B01bio']"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l04_stacked_filters_partial_revoke_self_correct",
+      "skill_on": false,
+      "run_idx": 2,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 6,
+          "user_msg": "다시 일탈로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-B01bio'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B03bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 7,
+          "user_msg": "2024년 조건만 풀어줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y23-B01bio'",
+            "answer contained forbidden substring 'DEV-Y24-B01bio'",
+            "answer contained forbidden substring 'DEV-Y23-A02'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 9,
+          "user_msg": "아 잠깐, 그냥 바이오도 같이 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'",
+            "answer contained forbidden substring 'DEV-Y23-A02'",
+            "answer contained forbidden substring 'DEV-Y23-B01'",
+            "answer contained forbidden substring 'DEV-Y23-C02'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l04_stacked_filters_partial_revoke_self_correct",
+      "skill_on": false,
+      "run_idx": 4,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 6,
+          "user_msg": "다시 일탈로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-B01bio'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B03bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 7,
+          "user_msg": "2024년 조건만 풀어줘",
+          "failures": [
+            "answer missing at least one of ['DEV-Y23-A01', 'DEV-Y23-A03', 'DEV-Y23-C01']"
+          ]
+        },
+        {
+          "turn_index": 9,
+          "user_msg": "아 잠깐, 그냥 바이오도 같이 보여줘",
+          "failures": [
+            "answer missing at least one of ['DEV-Y24-B01bio', 'DEV-Y24-B03bio', 'DEV-Y23-B01bio']"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l04_stacked_filters_partial_revoke_self_correct",
+      "skill_on": true,
+      "run_idx": 0,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 6,
+          "user_msg": "다시 일탈로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y23-A01'",
+            "answer contained forbidden substring 'DEV-Y23-B01bio'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 7,
+          "user_msg": "2024년 조건만 풀어줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y23-B01bio'",
+            "answer contained forbidden substring 'DEV-Y24-B01bio'",
+            "answer contained forbidden substring 'DEV-Y23-A02'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 9,
+          "user_msg": "아 잠깐, 그냥 바이오도 같이 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'",
+            "answer contained forbidden substring 'DEV-Y23-A02'",
+            "answer contained forbidden substring 'DEV-Y23-B01'",
+            "answer contained forbidden substring 'DEV-Y23-C02'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l04_stacked_filters_partial_revoke_self_correct",
+      "skill_on": true,
+      "run_idx": 1,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 6,
+          "user_msg": "다시 일탈로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y23-A01'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 9,
+          "user_msg": "아 잠깐, 그냥 바이오도 같이 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'",
+            "answer contained forbidden substring 'DEV-Y23-A02'",
+            "answer contained forbidden substring 'DEV-Y23-B01'",
+            "answer contained forbidden substring 'DEV-Y23-C02'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l04_stacked_filters_partial_revoke_self_correct",
+      "skill_on": true,
+      "run_idx": 2,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 6,
+          "user_msg": "다시 일탈로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y23-A01'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 9,
+          "user_msg": "아 잠깐, 그냥 바이오도 같이 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'",
+            "answer contained forbidden substring 'DEV-Y23-A02'",
+            "answer contained forbidden substring 'DEV-Y23-B01'",
+            "answer contained forbidden substring 'DEV-Y23-C02'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l04_stacked_filters_partial_revoke_self_correct",
+      "skill_on": true,
+      "run_idx": 3,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 6,
+          "user_msg": "다시 일탈로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y23-A01'",
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'"
+          ]
+        },
+        {
+          "turn_index": 9,
+          "user_msg": "아 잠깐, 그냥 바이오도 같이 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y24-A03'",
+            "answer contained forbidden substring 'DEV-Y24-B02'",
+            "answer contained forbidden substring 'DEV-Y24-C03'",
+            "answer contained forbidden substring 'DEV-Y23-A02'",
+            "answer contained forbidden substring 'DEV-Y23-B01'",
+            "answer contained forbidden substring 'DEV-Y23-C02'",
+            "answer contained forbidden substring 'DEV-Y24-B02bio'",
+            "answer contained forbidden substring 'DEV-Y24-B04bio'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l04_stacked_filters_partial_revoke_self_correct",
+      "skill_on": true,
+      "run_idx": 4,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 7,
+          "user_msg": "2024년 조건만 풀어줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y23-B01bio'"
+          ]
+        },
+        {
+          "turn_index": 9,
+          "user_msg": "아 잠깐, 그냥 바이오도 같이 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-Y23-B01'"
+          ]
+        }
+      ],
+      "error": null
+    }
+  ],
+  "aggregate": {
+    "l04_stacked_filters_partial_revoke_self_correct": {
+      "False": {
+        "pass": 0,
+        "total": 5
+      },
+      "True": {
+        "pass": 0,
+        "total": 5
+      }
+    }
+  }
+}

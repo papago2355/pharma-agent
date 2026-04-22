@@ -1,0 +1,381 @@
+{
+  "model": "google/gemma-4-26B-A4B-it",
+  "runs_per_cell": 5,
+  "wall_time_seconds": 257.75613021850586,
+  "cells": [
+    {
+      "scenario": "l01_long_sticky_exclude_durability",
+      "skill_on": false,
+      "run_idx": 1,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 0,
+          "user_msg": "최근 일탈 기록 보여줘",
+          "failures": [
+            "answer missing required substring 'DEV-L01'"
+          ]
+        },
+        {
+          "turn_index": 7,
+          "user_msg": "다시 일탈 이야기로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-L09'",
+            "answer contained forbidden substring 'DEV-L10'",
+            "answer contained forbidden substring 'DEV-L11'",
+            "answer contained forbidden substring 'DEV-L14'",
+            "answer contained forbidden substring 'DEV-L18'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l01_long_sticky_exclude_durability",
+      "skill_on": false,
+      "run_idx": 0,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 0,
+          "user_msg": "최근 일탈 기록 보여줘",
+          "failures": [
+            "answer missing required substring 'DEV-L01'"
+          ]
+        },
+        {
+          "turn_index": 7,
+          "user_msg": "다시 일탈 이야기로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-L09'",
+            "answer contained forbidden substring 'DEV-L10'",
+            "answer contained forbidden substring 'DEV-L11'",
+            "answer contained forbidden substring 'DEV-L14'",
+            "answer contained forbidden substring 'DEV-L18'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l01_long_sticky_exclude_durability",
+      "skill_on": false,
+      "run_idx": 2,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 0,
+          "user_msg": "최근 일탈 기록 보여줘",
+          "failures": [
+            "answer missing required substring 'DEV-L01'"
+          ]
+        },
+        {
+          "turn_index": 7,
+          "user_msg": "다시 일탈 이야기로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-L09'",
+            "answer contained forbidden substring 'DEV-L10'",
+            "answer contained forbidden substring 'DEV-L11'",
+            "answer contained forbidden substring 'DEV-L14'",
+            "answer contained forbidden substring 'DEV-L18'"
+          ]
+        },
+        {
+          "turn_index": 11,
+          "user_msg": "아 그럼 이번엔 바이오도 포함해서 다시 전체 정리해줘",
+          "failures": [
+            "answer missing at least one of ['DEV-L09', 'DEV-L10', 'DEV-L11', 'DEV-L14', 'DEV-L18']"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l01_long_sticky_exclude_durability",
+      "skill_on": false,
+      "run_idx": 3,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 0,
+          "user_msg": "최근 일탈 기록 보여줘",
+          "failures": [
+            "answer missing required substring 'DEV-L01'"
+          ]
+        },
+        {
+          "turn_index": 7,
+          "user_msg": "다시 일탈 이야기로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-L09'",
+            "answer contained forbidden substring 'DEV-L10'",
+            "answer contained forbidden substring 'DEV-L11'",
+            "answer contained forbidden substring 'DEV-L14'",
+            "answer contained forbidden substring 'DEV-L18'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l01_long_sticky_exclude_durability",
+      "skill_on": true,
+      "run_idx": 0,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l01_long_sticky_exclude_durability",
+      "skill_on": false,
+      "run_idx": 4,
+      "passed": false,
+      "failures": [
+        {
+          "turn_index": 0,
+          "user_msg": "최근 일탈 기록 보여줘",
+          "failures": [
+            "answer missing required substring 'DEV-L01'"
+          ]
+        },
+        {
+          "turn_index": 7,
+          "user_msg": "다시 일탈 이야기로 돌아가서, 이번 달 전체 기록 다시 보여줘",
+          "failures": [
+            "answer contained forbidden substring 'DEV-L09'",
+            "answer contained forbidden substring 'DEV-L10'",
+            "answer contained forbidden substring 'DEV-L11'",
+            "answer contained forbidden substring 'DEV-L14'",
+            "answer contained forbidden substring 'DEV-L18'"
+          ]
+        }
+      ],
+      "error": null
+    },
+    {
+      "scenario": "l01_long_sticky_exclude_durability",
+      "skill_on": true,
+      "run_idx": 1,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l01_long_sticky_exclude_durability",
+      "skill_on": true,
+      "run_idx": 2,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l01_long_sticky_exclude_durability",
+      "skill_on": true,
+      "run_idx": 3,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l01_long_sticky_exclude_durability",
+      "skill_on": true,
+      "run_idx": 4,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l02_long_referential_decay",
+      "skill_on": false,
+      "run_idx": 0,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l02_long_referential_decay",
+      "skill_on": false,
+      "run_idx": 1,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l02_long_referential_decay",
+      "skill_on": false,
+      "run_idx": 2,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l02_long_referential_decay",
+      "skill_on": false,
+      "run_idx": 3,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l02_long_referential_decay",
+      "skill_on": true,
+      "run_idx": 0,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l02_long_referential_decay",
+      "skill_on": false,
+      "run_idx": 4,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l02_long_referential_decay",
+      "skill_on": true,
+      "run_idx": 1,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l02_long_referential_decay",
+      "skill_on": true,
+      "run_idx": 2,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l02_long_referential_decay",
+      "skill_on": true,
+      "run_idx": 3,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l02_long_referential_decay",
+      "skill_on": true,
+      "run_idx": 4,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l03_long_late_contradiction",
+      "skill_on": false,
+      "run_idx": 0,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l03_long_late_contradiction",
+      "skill_on": false,
+      "run_idx": 1,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l03_long_late_contradiction",
+      "skill_on": false,
+      "run_idx": 2,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l03_long_late_contradiction",
+      "skill_on": false,
+      "run_idx": 3,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l03_long_late_contradiction",
+      "skill_on": false,
+      "run_idx": 4,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l03_long_late_contradiction",
+      "skill_on": true,
+      "run_idx": 1,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l03_long_late_contradiction",
+      "skill_on": true,
+      "run_idx": 0,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l03_long_late_contradiction",
+      "skill_on": true,
+      "run_idx": 2,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l03_long_late_contradiction",
+      "skill_on": true,
+      "run_idx": 3,
+      "passed": true,
+      "failures": [],
+      "error": null
+    },
+    {
+      "scenario": "l03_long_late_contradiction",
+      "skill_on": true,
+      "run_idx": 4,
+      "passed": true,
+      "failures": [],
+      "error": null
+    }
+  ],
+  "aggregate": {
+    "l01_long_sticky_exclude_durability": {
+      "False": {
+        "pass": 0,
+        "total": 5
+      },
+      "True": {
+        "pass": 5,
+        "total": 5
+      }
+    },
+    "l02_long_referential_decay": {
+      "False": {
+        "pass": 5,
+        "total": 5
+      },
+      "True": {
+        "pass": 5,
+        "total": 5
+      }
+    },
+    "l03_long_late_contradiction": {
+      "False": {
+        "pass": 5,
+        "total": 5
+      },
+      "True": {
+        "pass": 5,
+        "total": 5
+      }
+    }
+  }
+}

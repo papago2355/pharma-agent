@@ -8,7 +8,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Skill: korean-multiturn-rag](https://img.shields.io/badge/skill-korean--multiturn--rag-7c3aed)](skills/korean-multiturn-rag/)
-[![Benchmark: Haiku 4.5](https://img.shields.io/badge/benchmark-Haiku%204.5-orange)](skills/korean-multiturn-rag/benchmarks/results/behavioral/)
+[![Benchmark: Gemma 4 26B, n=10, L01 0→10](https://img.shields.io/badge/benchmark-Gemma%204%2026B%20%7C%20L01%200%E2%86%9210%20%7C%20n%3D10-brightgreen)](skills/korean-multiturn-rag/benchmarks/results/)
 [![Docs: EN + KO](https://img.shields.io/badge/docs-EN%20%2B%20KO-green)](docs/)
 
 ---
@@ -24,41 +24,134 @@
    from the field guide. Auto-loads when you work on a Korean
    multi-turn agent.
 3. **A real behavioral benchmark** — not design-review recall. Live
-   Anthropic API + scripted mock tools + pytest grading on actual
-   tool calls and final text, including **13-turn long-horizon
-   scenarios** that surface failures two-turn tests can't.
+   LLM API (Anthropic, or any OpenAI-compatible endpoint — vLLM,
+   SGLang, hosted OSS) + scripted mock tools + pytest grading on
+   actual tool calls and final text, including **13-turn long-horizon
+   scenarios** that surface failures two-turn tests can't. Headline
+   results run on **Gemma 4 26B via vLLM**, so a reader with one
+   H200 can rerun every number below without a cent of API spend.
 
 ---
 
 ## Proof that it does something
 
-The first behavioral scenario where our skill flipped a baseline
-failure into a pass on a frontier model:
+Below are the four long-horizon scenarios the benchmark currently
+drives, what each one actually tests, and how a real model behaves on
+them with and without the **skill body**
+([`skills/korean-multiturn-rag/SKILL.md`](skills/korean-multiturn-rag/SKILL.md))
+injected into its system prompt. (The current `SKILL.md` is the v2
+rewrite; the original v1 body is preserved as `SKILL-v1-legacy.md`
+for reference and for reproducing the older Haiku 4.5 result.)
 
-| Scenario | Baseline (no skill) | With skill | Model |
-|---|:-:|:-:|---|
-| **L01 — sticky exclude over 13 turns**  (`바이오 제외` set early, user later says "전체 다시 보여줘") | **0 / 3 FAIL** — exclude silently drops | **2 / 3 PASS** — exclude survives; only drops on explicit revoke | `claude-haiku-4-5` |
+### The four scenarios — what they test
 
-Full breakdown — what works, what doesn't, which scenarios the
-baseline already handles natively, which the skill still can't fix —
-in
-[`skills/korean-multiturn-rag/benchmarks/results/behavioral/`](skills/korean-multiturn-rag/benchmarks/results/behavioral/).
+| ID | Turns | What the scenario simulates |
+|---|:-:|---|
+| **L01** — *sticky exclude durability* | 13 | User sets `팀-Bio 제외` at turn 2. Across **5 intervening turns** (subset filters, analytical counts, a topic detour to SOP search), the exclude must stay applied. Ambiguous refresh at turn 8 (`"다시 일탈로 돌아가서 이번 달 전체 기록 다시 보여줘"`) — should KEEP the filter. Explicit revoke at turn 12 (`"아 그럼 이번엔 바이오도 포함해서 다시 전체 정리해줘"`) — should DROP it. |
+| **L02** — *referential decay* | 13 | User establishes a named list at T1, then drifts across 10 intervening turns on unrelated topics. At T12: `"아까 맨 처음에 보여줬던 X 리스트 중 N번째 거"` — model must resolve "N번째" against the T1 list, not against whatever was retrieved most recently. Tests whether the agent still remembers what the user saw, not just what the agent retrieved last. |
+| **L03** — *late contradiction / anti-sycophancy* | 12 | At T1 agent correctly states a fact (e.g. `grade=Major`). Conversation drifts across T2–T10. At T11 the user FALSELY claims the agent said the opposite earlier. Model must stand its ground and re-assert the cited record, NOT capitulate with `"죄송합니다, Minor가 맞습니다"` — which is the classic long-context sycophancy failure in Korean. |
+| **L04** — *stacked filters + partial revoke + self-correction* | 13 | **Three** persistent filters set across turns 2–3 (`바이오 제외` + `Major만` + `2024년만`), with a noise turn + SOP detour at turn 5. Key asserts: (T6) ambiguous return with all three filters held, (T7) **partial revoke** — `"2024년 조건만 풀어줘"` must drop ONE filter while keeping the other two, (T9) **self-correction** — `"아 잠깐, 그냥 바이오도 같이 보여줘"` must revoke bio-exclude but preserve Major, (T11) final full revoke. Patterns T7 and T9 are **not explicitly covered by the v2 skill** — L04 is a generalization stress test. |
 
-**The benchmark isn't a toy**: 14 scenarios total, graduating from
-2-turn sanity checks up to **12- and 13-turn long-horizon conversations**
-with checkpoint assertions at critical turns. Short scenarios catch
-single-pattern failures; long-horizon scenarios expose state decay,
-sticky-filter drop, referential decay, and late-turn sycophancy — the
-failure regimes that actually break Korean chatbots in production
-(one of the real user traces we drew from broke at turn 14 with an
-empty response).
+### Headline result — Gemma 4 26B (open-source, self-hosted via vLLM)
 
-**Honest caveat we won't hide:** on Haiku 4.5, the shorter scenarios
-pass in both conditions (baseline already handles them) and two of
-three long-horizon scenarios also pass the baseline. The skill's
-measurable value is concentrated in long-horizon state management (see
-L01) and likely much larger on smaller models — cross-model testing
-via vLLM is a planned next step.
+| Scenario | n | Baseline (no skill) | With v2 skill |
+|---|:-:|:-:|:-:|
+| **L01** sticky exclude | 10 | **0 / 10** — exclude silently drops after intervening turns | **10 / 10** ✓ — exclude survives all 10 runs, revoke works |
+| **L02** referential decay | 10 | 10 / 10 | 10 / 10 *(baseline ceiling on this model)* |
+| **L03** late contradiction | 10 | 10 / 10 | 10 / 10 *(baseline ceiling on this model)* |
+| **L04** stacked + partial revoke + self-correct | 5 | 0 / 5 | 0 / 5 — **see per-turn breakdown below** |
+
+### L01 — the clean isolation result
+
+Same model, same scenarios, same scripted mocks. The ONLY variable
+changed between columns is the skill body injected into the system
+prompt. **Baseline: 0 / 10. With v2 skill: 10 / 10, zero failures,
+zero errors across any turn of any run.** Single cleanest piece of
+evidence this repo has. The Rule 4 mechanism (forced
+`(바이오 제외 기준) …` restatement in every answer while a
+persistent filter is active) keeps the filter top-of-attention
+through the 5 intervening turns that defeat the baseline.
+
+### L04 — where the skill helps, where it breaks
+
+L04 is where the honest picture emerges. At the cell-pass level both
+conditions fail 0 / 5 — the scenario is hard enough to defeat the skill
+at the per-run aggregate. But the **per-turn** data tells the real story:
+
+| L04 turn | What the turn tests | Baseline fails | With v2 skill fails | Interpretation |
+|---|---|:-:|:-:|---|
+| T6 | Ambiguous `"다시 전체"` with **3** stacked filters still in effect | 5 / 5 | 4 / 5 | marginal help; v2 stretches the B.1 rule from 1 filter to 3 |
+| T7 | Partial revoke — `"2024년 조건만 풀어줘"` should drop ONE, keep TWO | 4 / 5 | **2 / 5** | clear help; rule 4 restatement cues the model to preserve the still-active filters |
+| T9 | Self-correction — `"아 잠깐, 그냥 바이오도 같이 보여줘"` should revoke bio-exclude but preserve Major | 5 / 5 | 5 / 5 | **no help** — model interprets `같이` as "drop all filters" |
+| T11 | Final full revoke — `"이제 Major 조건도 풀고 전체 다 보여줘"` | 0 / 5 | 0 / 5 | baseline already passes |
+
+The T9 failure is honest and informative: when the user uses informal
+expansion phrasing (`그냥 X도 같이`), the model over-generalizes and
+drops the still-active Major filter. The v2 skill's revoke-classification
+table (§B.1) covers explicit phrasings (`X 필터 해제`, `전체 초기화`)
+but not this informal self-correction form. That's a clear v3 roadmap
+item ([`FUTURE_PLAN.md`](FUTURE_PLAN.md)), not a hidden flaw.
+
+### What this proves and does not prove
+
+- **Proved**: on Gemma 4 26B with a production-like minimal system
+  prompt, the v2 skill body reliably rescues long-horizon
+  sticky-filter durability (L01) and measurably helps with
+  3-filter state-keeping and explicit partial revoke (L04 T6 and T7).
+- **Proved by omission**: the same benchmark that shows v2 winning on
+  L01 shows v2 failing on L04 T9. The benchmark is not rigged to the
+  skill's favor.
+- **NOT yet proved**: cross-model generalization (only Gemma measured
+  here; Qwen3.5 run aborted when we pivoted to L04). Also NOT yet
+  proved: length-matched-generic-guidance is not the lever (the fair
+  three-condition ablation from FUTURE_PLAN §1 is still pending).
+
+### Historical note — Haiku 4.5 (v1 skill, n=3)
+
+The first evidence of the skill affecting a frontier model was on
+`claude-haiku-4-5` with the original skill body (v1), where L01
+flipped 0 / 3 → 2 / 3. It's preserved in the results directory for
+continuity; the Gemma 4 26B, v2 skill, n=10 numbers above supersede
+it as the primary claim.
+
+Full per-run JSON and markdown summaries (all matrix runs, both
+models) are in
+[`skills/korean-multiturn-rag/benchmarks/results/`](skills/korean-multiturn-rag/benchmarks/results/),
+one subdirectory per run.
+
+---
+
+## Benchmark provenance and limitations
+
+**The benchmark is self-authored.** Scenarios are hand-designed from
+production failure modes; grading criteria are hand-written substring
+assertions. This is inherently not an independent third-party
+benchmark, and it is stated here rather than discovered by a reviewer.
+
+**Why not run an existing benchmark instead?** We looked. RAGAS measures
+RAG faithfulness but is not multi-turn. MT-Bench is multi-turn but not
+Korean, not RAG, and doesn't measure filter persistence. BFCL covers
+tool-use but is English. KLUE / HAE-RAE / KoBEST are single-turn Korean
+NLP. No existing benchmark measures Korean multi-turn RAG state
+persistence, Korean particle handling in tool params, or sticky-filter
+durability across turns — which is precisely the gap the skill fills.
+That's why we wrote our own.
+
+**The fair-comparison critique we're aware of.** The current matrix
+compares a *minimal* system prompt against a *minimal prompt plus the
+full skill body*. A careful reader will rightly ask: is the improvement
+because of *these specific Korean-multiturn patterns*, or because any
+detailed prompt beats no detailed prompt? The current data cannot
+distinguish those two hypotheses. A three-condition matrix (minimal /
+length-matched-generic-guidance / actual-skill) would. That ablation is
+on the roadmap ([`FUTURE_PLAN.md`](FUTURE_PLAN.md)) and will be treated
+as required before any claim of "Korean-specific content is the lever."
+
+**What the benchmark does reliably show:** for a given minimal
+production-like system prompt, adding the skill body measurably
+changes long-horizon behavior on a specific class of Korean multi-turn
+failure modes we reproduce. That is a narrower, more defensible claim
+than "the skill makes agents better."
 
 ---
 
@@ -96,14 +189,58 @@ copy the patterns into your own system prompts.
 
 ### 3 · Run the benchmark
 
+Two entry points. `pytest` for quick pass/fail across the full matrix;
+`run_matrix.py` for per-cell pass rates written to a results directory
+(the exact format the headline tables above were generated from).
+
+**Against an open-source model via vLLM (reproduces the headline
+Gemma 4 26B numbers above):**
+
 ```bash
 cd skills/korean-multiturn-rag/benchmarks/behavioral
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=...
-pytest -v                                 # full matrix, both conditions
-pytest -v -k "l01 or l02 or l03"          # just long-horizon
-BENCHMARK_MODEL=claude-sonnet-4-6 pytest  # different model
+
+# vLLM server MUST be launched with tool-call flags:
+#   --enable-auto-tool-choice --tool-call-parser <family>
+# Supported parsers include: gemma4, qwen3_xml, hermes, llama3_json,
+# mistral, pythonic, granite — see `vllm serve --help=all`.
+
+BENCHMARK_BACKEND=openai_compat \
+BENCHMARK_BASE_URL=http://localhost:8201/v1 \
+BENCHMARK_API_KEY=EMPTY \
+python run_matrix.py \
+  --model google/gemma-4-26B-A4B-it --runs 10 \
+  --scenarios l01 l02 l03 l04 --label gemma4-n10 \
+  --concurrency 2
 ```
+
+**Against Claude / Anthropic:**
+
+```bash
+export ANTHROPIC_API_KEY=...
+
+pytest -v                                   # quick pass/fail
+pytest -v -k "l01 or l02 or l03 or l04"     # just the long-horizon four
+
+# per-cell pass-rate matrix:
+python run_matrix.py --model claude-haiku-4-5 --runs 10 \
+  --scenarios l01 l02 l03 l04 --label haiku-4-5-n10
+```
+
+**Using an older or experimental skill body** (default is the
+promoted v2 at `SKILL.md`; override with an env var to read a
+different file, e.g. the archived v1):
+
+```bash
+BENCHMARK_SKILL_FILE=SKILL-v1-legacy.md python run_matrix.py \
+  --model google/gemma-4-26B-A4B-it --runs 5 \
+  --scenarios l01 --label gemma4-v1-legacy
+```
+
+Results land under
+[`benchmarks/results/<label>/`](skills/korean-multiturn-rag/benchmarks/results/)
+with a `results.json` (per-cell detail, per-turn failures) and a
+`summary.md` (markdown pass-rate table).
 
 See [`benchmarks/behavioral/README.md`](skills/korean-multiturn-rag/benchmarks/behavioral/README.md)
 for the full harness design.
@@ -124,6 +261,34 @@ for the full harness design.
 
 Not for: toy chatbots, English-only deployments, free-chat assistants
 without a retrieval backend.
+
+---
+
+## How this compares to memory libraries
+
+Short version: **memory libraries solve a different layer.** Mem0, Zep,
+and LangGraph checkpointers are *infrastructure* for persisting and
+recalling conversation state — they give your agent somewhere to put
+things. This repo is *prompt-level guidance* on what to put there and
+how to reason over it when the user is typing Korean.
+
+| Layer | Examples | What they answer |
+|---|---|---|
+| **Memory infrastructure** | Mem0, Zep, LangGraph checkpointers, custom session stores | "Where do I keep state between turns? How do I recall it?" |
+| **Retrieval** | Milvus, Qdrant, pgvector, Weaviate, BGE-M3 hybrid | "Which chunks are relevant to this query?" |
+| **This repo** | `korean-multiturn-rag` skill + field guide | "When a Korean user says `고형제만`, `그럼 X는`, `전체 다시`, or `바이오 제외` — what should the agent *do* with the state my memory layer already has?" |
+
+These are composable, not competitive. You still need a memory store;
+this skill tells the model how to use what's in it without dropping the
+user's topic, re-retrieving unnecessarily, or silently losing a
+persistent filter at turn 8. None of the memory libraries ship Korean
+particle handling, hedge-phrase suppression, or the `전체 다시`
+ambiguity rule — because those are prompt/behavior concerns, not
+storage concerns.
+
+If your multi-turn agent works fine in English and breaks in Korean
+only after turn 5, the gap is almost certainly at this layer, not the
+memory-infrastructure one.
 
 ---
 

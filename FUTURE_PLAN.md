@@ -1,109 +1,120 @@
 # Future plan
 
-Docs currently marked TBD in the README, captured here as a roadmap so
-contributors (including future-me) know what's next and what each piece should
-cover. Numbered in the order I think they're most valuable to ship.
+Roadmap for what's next. Items 1–3 below are **shipped** — the docs exist in
+`docs/{en,ko}/04-06` — and are kept here as a pointer so contributors can
+find the motivation that produced them. Everything under **Next up** and
+**Parking lot** is genuinely still to do.
 
 ---
 
-## 1. Verifier cross-turn context
+## Shipped
 
-**Working title:** `docs/{en,ko}/04-verifier-cross-turn.md`
+These were on the roadmap and are now in the repo. Link + a one-line note
+so the original scoping isn't lost.
 
-**Problem this piece solves**
-Post-generation verifiers that only receive the current turn's context false-
-positive on every followup that legitimately reasons over prior-turn data.
-The answer cites "11건" (from turn 1) and the verifier flags it as fabricated
-because turn 2's retrieval returned different, broader records.
-
-**What the doc should cover**
-- Why verifiers should NOT be stateless — they're checking answers, and
-  answers span turns.
-- A minimal prompt template that accepts a `prior_context` section.
-- How to decide what goes into `prior_context` (records? distributions?
-  a summary?) — and why raw records beat summaries.
-- When to skip verification entirely (turn 1 GOLDEN hits, casual chat).
-- Severity grading so UI doesn't cry wolf on "low" warnings.
-- Budget: prior context cap separate from main context cap, so cross-turn
-  information can't starve evidence the answer is actually based on.
-
-**Evidence to draw on**
-- `backend/services/agent_verifier.py` before/after the fix.
-- A specific failed case: session showing answer correct, verifier WARN,
-  root cause = missing prior context.
+- ✅ **Verifier cross-turn context** → [`docs/en/04-verifier-cross-turn.md`](docs/en/04-verifier-cross-turn.md) · [`ko`](docs/ko/04-verifier-cross-turn.md)
+  — why stateless verifiers false-positive on multi-turn answers, and the
+  `prior_context` block that fixes it.
+- ✅ **Korean NLP gotchas for agentic RAG** → [`docs/en/05-korean-nlp-gotchas.md`](docs/en/05-korean-nlp-gotchas.md) · [`ko`](docs/ko/05-korean-nlp-gotchas.md)
+  — particle stripping, hedge-phrase regression, dosage-form fallback,
+  tokenizer variance.
+- ✅ **Pharma-specific patterns** → [`docs/en/06-pharma-specific.md`](docs/en/06-pharma-specific.md) · [`ko`](docs/ko/06-pharma-specific.md)
+  — QMS filter-first routing, SOP citation discipline, change-control chain,
+  GMP-aware refusal formatting.
+- ✅ **Inference-optimized SKILL.md rewrite (v2)** → promoted to
+  [`skills/korean-multiturn-rag/SKILL.md`](skills/korean-multiturn-rag/SKILL.md).
+  Converted the builder-facing field guide into imperative model-facing
+  rules with Korean few-shots and a forced-restatement rule. On Gemma
+  4 26B n=10 this flipped L01 (sticky exclude durability) from 0/10 to
+  10/10. Old body preserved at `SKILL-v1-legacy.md`.
 
 ---
 
-## 2. Korean NLP gotchas for agentic RAG
+## Next up
 
-**Working title:** `docs/{en,ko}/05-korean-nlp-gotchas.md`
+Prioritized in the order I think they're most valuable to ship.
 
-**Problem this piece solves**
-Korean morphology, particle attachment, and tokenizer variance quietly
-sabotage pattern-matching approaches that work fine in English. Every
-`if "X" in query:` branch has a silent failure mode on Korean input.
+### 1. Three-condition ablation (the fair-comparison fix)
 
-**What the doc should cover**
-- Particle stripping (만/의/관련/에서/을/를) when building `title_contains`
-  or other string filters. Examples: "고형제만" → "고형제".
-- Why regex intent classification over Korean is a lost cause: morphological
-  variants, spacing differences, homonyms.
-- 제형 (dosage-form) category vs. product-name token mismatch:
-  "고형제" almost never appears in titles → fall back to specific tokens
-  (정/캡슐/환/과립) when the literal category returns 0.
-- Hedge-phrase regression: Korean LLMs love "직접적인 내용은 없으나", which
-  reads as "no info" even when the docs do contain partial info. How to
-  write generation prompts that suppress this.
-- Tokenizer edge cases: BGE-M3 vs tokenizers trained on Korean — why the
-  same sparse embedding model can rank differently after a rebuild.
-- A short list of terms that collapse to the same stem and break exact-match
-  filters.
+Highest-priority empirical gap. Current benchmark compares
+`minimal_prompt` vs `minimal_prompt + skill_body`. That cannot
+distinguish "Korean-specific patterns are the lever" from "any longer
+thoughtful prompt helps." Fix with a three-condition matrix:
 
-**Evidence to draw on**
-- Memory notes: Korean particle tokenization, 제형 fallback, hedge-phrase
-  removal from generation prompts.
-- Real query → wrong filter cases from chat logs.
+- **a — Baseline**: current minimal system prompt.
+- **b — Generic guidance (length-matched)**: a prompt roughly matching
+  the skill in word count, containing generic multi-turn agent rules
+  (be careful about state, cite sources, don't hallucinate, clarify
+  ambiguity) with **zero Korean-specific content** — no particle
+  stripping, no sticky-filter table, no hedge-phrase rule.
+- **c — Actual skill**: the current `SKILL.md` body.
+
+Interpretation:
+- `c > b > a`  → specificity matters; skill earns its claim.
+- `c ≈ b > a`  → length is the lever; skill overclaims.
+- `c > b ≈ a`  → very strong evidence skill content is doing the work.
+
+Ship before making any "Korean patterns are the lever" claim in
+marketing, talks, or docs beyond what's currently in README.
+
+### 2. Mem0 / Zep / LangGraph memory ablation
+
+Add a fourth condition using one off-the-shelf memory library
+(Mem0 first, it has the simplest integration) as the memory layer
+under baseline. If the skill still moves metrics over that, it
+demonstrates the patterns are orthogonal to memory infrastructure —
+the exact claim made in the README's "How this compares" section.
+
+### 3. Richer mock retrieval content in scenarios
+
+Current scenario mocks return thin structured rows (`{id, team, grade, ...}`)
+which is the right shape for assertions on filter behavior. But the
+scenarios would read as more "real" — and exercise the generation layer
+— if mocks also included Korean paragraph-level document text and
+source citations. Design this as a NEW scenario family (`s12_rich_mock_text.yaml`,
+etc.) rather than rewriting existing L/S scenarios, so the filter-behavior
+assertions keep their current precision.
+
+### 4. Benchmark coverage for the patterns that aren't yet measured
+
+The field guide covers ~6 patterns; only a subset has a behavioral scenario.
+Write scenarios for:
+
+- **Particle stripping under adversarial phrasing** (already has s02, but
+  could be expanded to cover 만성/만료/만족/만약 homonym traps).
+- **Hedge-phrase regression** on generation — assert the answer does NOT
+  contain "직접적인 내용은 없으나" when partial info exists.
+- **Verifier cross-turn** — add a scenario that runs a mock verifier and
+  shows baseline false-positive vs. skill-guided pass.
+
+### 5. Cross-model matrix
+
+Current state: **Gemma 4 26B** via vLLM at n=10 for L01–L03 and n=5 for
+L04 (the headline evidence); **Claude Haiku 4.5** n=3 on v1 skill only
+(historical row). Still outstanding:
+
+- **Qwen 3.5 35B FP8 via vLLM** (tool-call parser `qwen3_xml`
+  confirmed working). Deferred from the Gemma session because of GPU
+  contention with the production Gemma 4 service — schedule for a
+  separate idle window when CKD is offline for maintenance.
+- **Claude Haiku 4.5 rerun on the promoted v2 SKILL.md** — the v1
+  result was 0/3 → 2/3; v2 should go materially higher.
+- **Claude Sonnet 4.6** — stronger Anthropic baseline; where L04-T9
+  might be solvable without any v3 rule change.
+- **Weaker models** (Haiku 3.5, Qwen 7B) — should amplify the skill's
+  effect if the patterns-vs-length-matched hypothesis from §1 holds.
+
+### 6. n-run aggregation in the pytest harness
+
+Currently `BENCHMARK_RUNS` + a threshold assertion only tells you pass/fail
+per cell. Add a mode that emits per-cell pass rates (e.g. `7/10`) into a
+results JSON so the README table can regenerate from a single command.
 
 ---
 
-## 3. Pharma-specific patterns
+## Parking lot
 
-**Working title:** `docs/{en,ko}/06-pharma-specific.md`
-
-**Problem this piece solves**
-Regulated-industry RAG has rules the generic RAG cookbook doesn't:
-citations must survive audit, deviations and CAPA have canonical
-vocabularies, and "close enough" answers fail in ways that have
-compliance consequences.
-
-**What the doc should cover**
-- **QMS data structure**: 일탈 / CAPA / 변경관리 / 시정조치 as a small
-  fixed table taxonomy. Why search over this table needs filter-first
-  not semantic-first.
-- **SOP citation discipline**: document number (<COMPANY>-SOP-xxxx), version,
-  section (e.g., 5.1.4항) — all three required for audit-trace citations.
-- **Dosage-form fallback**: how the "고형제 → 정/캡슐/환/과립" mapping
-  should live in a wiki page the agent consults, not hardcoded.
-- **Change-control chain**: 제품표준서 → 마스터 제조 지시 및 기록서 →
-  실제 제조 — why an agent must reason about upstream document state,
-  not just current state.
-- **QMS subset-filter pattern**: "고형제만 추려줘" on prior deviation
-  results — this is the pattern we shipped; explain the
-  persist-records + surface-in-prev-context + filter-in-thought design.
-- **GMP-aware answer formatting**: when to refuse, when to hedge, when
-  to answer — and how to make the refusal itself useful (point to the
-  nearest SOP instead of just saying "no info").
-
-**Evidence to draw on**
-- `backend/config/prompts/agent_system_prompts.yaml` rules 13–14a, 16.
-- `backend/routers/chat_v2.py` session_state handoff code.
-- Wiki pages around QMS taxonomy and dosage forms.
-
----
-
-## Unprioritized / parking lot
-
-Things that might become their own docs later, or might fold into the above:
+Topics that might become their own docs later, or might fold into the above.
 
 - **Prompt versioning & rollback**: how to promote `rag_prompts_v6.yaml`
   safely when `_vN+1` regresses on some slice.
