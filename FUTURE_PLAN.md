@@ -96,7 +96,7 @@ L04 (the headline evidence); **Claude Haiku 4.5** n=3 on v1 skill only
 - **Qwen 3.5 35B FP8 via vLLM** (tool-call parser `qwen3_xml`
   confirmed working). Deferred from the Gemma session because of GPU
   contention with the production Gemma 4 service — schedule for a
-  separate idle window when CKD is offline for maintenance.
+  separate idle window when service is offline for maintenance.(I am low on budget sorry)
 - **Claude Haiku 4.5 rerun on the promoted v2 SKILL.md** — the v1
   result was 0/3 → 2/3; v2 should go materially higher.
 - **Claude Sonnet 4.6** — stronger Anthropic baseline; where L04-T9
