@@ -24,7 +24,8 @@
 # 2026-04-24. See docs/en/07-example-token-leakage.md for the full story.
 #
 # NOTE: all IDs and titles are fictional mockups designed to mirror the
-# bracketed-prefix file convention used in CKD pharma SOPs.
+# bracketed-prefix file convention used in Korean pharma SOPs (where each
+# document name carries a `[부서]` or `[카테고리]` prefix).
 
 name: example_token_leakage
 domain: pharma_sop_generic

@@ -20,7 +20,7 @@ vLLM(과 대부분의 최신 OSS 추론 엔진)은 **자동 prefix caching**을 
 
 **Before (전형적인 레이아웃):**
 ```
-Line 1: You are a CKD pharmaceutical {domain_label} search coordinator.
+Line 1: You are a pharmaceutical {domain_label} search coordinator.
 Line 2: Your job is to find the right data — NOT to analyze ...
 Line 3: A separate generation model will receive ALL your search results...
 Line 4: <blank>
@@ -41,7 +41,7 @@ cache는 첫 갈라짐 지점까지만 매치하므로, 호출마다 프롬프�
 
 **After (한 줄 이동):**
 ```
-Line 1: You are a CKD pharmaceutical {domain_label} search coordinator.
+Line 1: You are a pharmaceutical {domain_label} search coordinator.
 Line 2: Your job is to find the right data — NOT to analyze ...
 Line 3: A separate generation model will receive ALL your search results...
 Line 4: <blank>

@@ -20,7 +20,7 @@ Production agent system prompt (Korean pharma RAG, ~22K chars assembled):
 
 **Before (typical layout):**
 ```
-Line 1: You are a CKD pharmaceutical {domain_label} search coordinator.
+Line 1: You are a pharmaceutical {domain_label} search coordinator.
 Line 2: Your job is to find the right data — NOT to analyze ...
 Line 3: A separate generation model will receive ALL your search results...
 Line 4: <blank>
@@ -41,7 +41,7 @@ appears. vLLM's prefix cache matches up to the first divergence, so
 
 **After (one-line move):**
 ```
-Line 1: You are a CKD pharmaceutical {domain_label} search coordinator.
+Line 1: You are a pharmaceutical {domain_label} search coordinator.
 Line 2: Your job is to find the right data — NOT to analyze ...
 Line 3: A separate generation model will receive ALL your search results...
 Line 4: <blank>
