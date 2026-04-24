@@ -53,11 +53,26 @@ phrasing instinct, follow the rule.
 10. **If a prior turn established a disambiguation** (user clarified
     which `A` meant in `A정` / `A캡슐`), that disambiguation is sticky
     for the whole session. Do not re-ask.
+11. **Bracketed prefixes in queries are POSITIVE selectors, never
+    exclusion markers.** When the user query contains `[X]` (e.g.
+    `[바이오]`, `[QC]`, `[VAL]`, `[페니]`, `[OSD]`) or an explicit
+    category constraint (`X SOP만`, `X 부서 문서 중`), the user is
+    asking you to FIND `[X]`-prefixed documents. Pass the token
+    (without brackets) in `title_contains`. NEVER put it in
+    `exclude_terms`. The literal example token in any exclusion rule
+    you've been given is a placeholder — its presence in a user query
+    is NOT permission to apply the exclusion. Apply exclusion ONLY
+    when the query literally contains 제외 / 말고 / 빼고 / 없이.
 
 Rules 1, 2, 3, and 4 together solve the long-horizon sticky-filter
 failure mode. Rules 5 and 6 solve the Korean morphology failure.
 Rule 7 solves the "answer hedges despite good retrieval" failure.
 Rules 8–10 solve the multi-turn disambiguation failures.
+Rule 11 solves example-token leakage — the bug where a model
+pattern-matches the literal noun in an exclusion rule's worked example
+and applies the exclusion whenever the user's query mentions that noun
+(even in bracketed file prefixes that should obviously be searched
+for, not against).
 
 ---
 

@@ -1,0 +1,103 @@
+# s12 — example-token leakage (single-turn bait test).
+#
+# A well-written rule with a worked example. The rule's precondition is
+# "user query LITERALLY contains 제외 / 말고 / 빼고 / 없이". The example
+# uses the literal token "바이오" as the excluded department. This is
+# the PRE-FIX system prompt — exactly what a careful agent author would
+# write today, and what we shipped to production before 2026-04-24.
+#
+# Bait turn: a query that mentions "바이오" three times in bracketed
+# file prefixes (`[바이오] X`, `[바이오] Y`, `[바이오] Z`) but contains
+# ZERO exclusion verbs. The user is asking the agent to FIND the three
+# bracketed-prefix documents.
+#
+# A model that respects the precondition gate calls search WITHOUT
+# exclude_terms. A model that pattern-matches off the example token
+# emits exclude_terms=["바이오"] and would silently filter out the
+# very docs the user named.
+#
+# This is a single-turn scenario by design — the failure mode is a
+# literal-precondition gate, not a multi-turn state bug. n=10 with
+# temperature 0 surfaces the leakage rate cleanly.
+#
+# Real incident this scenario reproduces: Korean pharma RAG production,
+# 2026-04-24. See docs/en/07-example-token-leakage.md for the full story.
+#
+# NOTE: all IDs and titles are fictional mockups designed to mirror the
+# bracketed-prefix file convention used in CKD pharma SOPs.
+
+name: example_token_leakage
+domain: pharma_sop_generic
+
+system_prompt: |
+  You are a Korean pharmaceutical SOP search assistant. Respond in Korean.
+
+  ## Rules
+
+  1. Use the search_sop tool to find SOP documents matching the user's request.
+  2. Always respond in Korean. Cite the document IDs you used.
+  3. EXCLUSION: When the user says **제외 / 말고 / 빼고 / 없이**, pass the
+     excluded terms in `exclude_terms`. Example: `"바이오 부서를 제외한
+     멸균 문서"` → `exclude_terms: ["바이오"]`.
+
+tools:
+  - name: search_sop
+    description: >-
+      Semantic search over SOP documents. Returns ranked records with file
+      names and IDs.
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Search query terms.
+        title_contains:
+          type: array
+          items: {type: string}
+          description: >-
+            Pre-filter on file_name; AND across terms. Use to constrain
+            the search to documents whose name contains these tokens.
+        exclude_terms:
+          type: array
+          items: {type: string}
+          description: >-
+            Post-filter remove. Only when user literally says
+            제외/말고/빼고/없이.
+      required: [query]
+
+mock:
+  # Catch-all — return the same six records for any search_sop call so
+  # the mock cannot accidentally satisfy assertions by quietly trimming
+  # the response based on the agent's own exclude_terms argument.
+  # The bait we're testing is what the agent CHOOSES to put in the
+  # tool params, not how a server would react to it.
+  - tool: search_sop
+    when: {}
+    returns:
+      total: 6
+      records:
+        - {id: "MOCK-SOP-1435", title: "[바이오] 위수탁 시험 관리 방법서(바이오QC)", score: 1.00}
+        - {id: "MOCK-SOP-1444", title: "[바이오] 품질협약서 관리",                     score: 0.97}
+        - {id: "MOCK-SOP-1271", title: "[바이오] 협력업체 관리",                       score: 0.95}
+        - {id: "MOCK-SOP-0854", title: "품질협약서 관리",                              score: 0.85}
+        - {id: "MOCK-SOP-1219", title: "[QC] 품질관리시험 위수탁 관리 방법서",          score: 0.80}
+        - {id: "MOCK-SOP-1166", title: "[SOP] 위탁 제조 관리 방법서",                  score: 0.74}
+
+turns:
+  # Single decisive turn — a query that mentions "바이오" three times
+  # in bracketed file prefixes but contains zero exclusion verbs.
+  - user: "[바이오] 협력업체 관리 [바이오] 위수탁 시험 관리 방법서(바이오QC) [바이오] 품질협약서 관리 요약해줘"
+    expect:
+      tool_called: search_sop
+
+      # CRITICAL: the model must NOT put '바이오' inside exclude_terms.
+      # That's the bug — example-token leakage off Rule 3. A buggy
+      # model would emit exclude_terms=["바이오"] off the rule's literal
+      # example token. A model that respects the literal precondition
+      # gate (no 제외/말고/빼고/없이 in the query) leaves exclude_terms
+      # empty.
+      #
+      # tool_params_not_contain is keyed (vs tool_params_absent which is
+      # flat) so '바이오' appearing inside the `query` param is fine —
+      # we only forbid it inside `exclude_terms`.
+      tool_params_not_contain: {exclude_terms: "바이오"}

@@ -1,11 +1,19 @@
 """Grade a RunResult against a scenario's per-turn expectations.
 
 Expectations per turn (all optional):
-  tool_called:          name of expected tool, or null for "no tool call"
-  tool_params_contain:  dict of substrings to check in the tool_input
-  tool_params_absent:   list of substrings that must NOT appear in any param
-  answer_contains:      list of substrings that must appear in final_text
-  answer_not_contains:  list of substrings that must NOT appear
+  tool_called:              name of expected tool, or null for "no tool call"
+  tool_params_contain:      dict of substrings to check in the tool_input
+  tool_params_not_contain:  dict of {param_name: forbidden_substring} —
+                            no tool call may have that substring inside that
+                            specific param. Keyed counterpart to
+                            tool_params_contain; useful for "the agent must
+                            NOT pass `exclude_terms` containing '바이오'"
+                            without false-positive matching against the
+                            same token appearing in the `query` param.
+  tool_params_absent:       list of substrings that must NOT appear in any param
+  answer_contains:          list of substrings that must appear in final_text
+  answer_contains_any:      list of substrings; at least one must appear
+  answer_not_contains:      list of substrings that must NOT appear
 """
 
 from __future__ import annotations
@@ -64,6 +72,18 @@ def grade_turn(turn_result, expect: dict, idx: int) -> TurnVerdict:
             failures.append(
                 f"no tool call matched params_contain={want}; calls={turn_result.tool_calls}"
             )
+
+    if "tool_params_not_contain" in expect:
+        forbidden = expect["tool_params_not_contain"]
+        for call in turn_result.tool_calls:
+            for k, v in forbidden.items():
+                if k not in call["input"]:
+                    continue
+                if str(v) in json.dumps(call["input"][k], ensure_ascii=False):
+                    failures.append(
+                        f"tool call {call['name']} param '{k}' contained forbidden "
+                        f"substring '{v}': {call['input'][k]}"
+                    )
 
     if "tool_params_absent" in expect:
         forbidden = expect["tool_params_absent"]
