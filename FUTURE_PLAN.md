@@ -27,6 +27,13 @@ so the original scoping isn't lost.
   rules with Korean few-shots and a forced-restatement rule. On Gemma
   4 26B n=10 this flipped L01 (sticky exclude durability) from 0/10 to
   10/10. Old body preserved at `SKILL-v1-legacy.md`.
+- ✅ **Multi-turn escape rules** → [`docs/en/09-multi-turn-escape-rules.md`](docs/en/09-multi-turn-escape-rules.md) · [`ko`](docs/ko/09-multi-turn-escape-rules.md)
+  — three escape signals (hedge-loop, search-decay, short-followup
+  differentiation), the verifier dual signal (`is_hedge` vs
+  `is_dead_end_escape`), 0-result state hygiene, per-instance vs
+  list-level dedup, and an LLM-composed graceful no-results handler
+  replacing canned-string fallbacks. Distilled from a multi-turn
+  awareness phase that resolved 3 of 4 production regression failures.
 
 ---
 

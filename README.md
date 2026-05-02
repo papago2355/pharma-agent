@@ -169,6 +169,7 @@ Docs are side-by-side EN + KO — pick whichever reads faster for you.
 | 04 | Verifier cross-turn context | [en](docs/en/04-verifier-cross-turn.md) | [ko](docs/ko/04-verifier-cross-turn.md) |
 | 05 | Korean NLP gotchas | [en](docs/en/05-korean-nlp-gotchas.md) | [ko](docs/ko/05-korean-nlp-gotchas.md) |
 | 06 | Pharma-specific patterns | [en](docs/en/06-pharma-specific.md) | [ko](docs/ko/06-pharma-specific.md) |
+| 09 | Multi-turn escape rules | [en](docs/en/09-multi-turn-escape-rules.md) | [ko](docs/ko/09-multi-turn-escape-rules.md) |
 
 ### 2 · Install the skill (for Claude Code)
 
@@ -308,6 +309,10 @@ memory-infrastructure one.
 - **Why** an auditor-grade citation needs *three* fields, not one.
 - **How to actually test a skill** — live tool-use loop with mock
   retrieval, not subagent recall theater.
+- **Why** your agent re-searches the same dead-end three turns in a
+  row, or paraphrases its prior answer back when the user types
+  "말한 거야" — and the three escape signals (hedge-loop,
+  search-decay, short-followup differentiation) that stop it.
 
 Each claim comes with either a doc chapter explaining the mechanism,
 a benchmark scenario demonstrating it, or both.
