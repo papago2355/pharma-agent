@@ -33,8 +33,8 @@ from?" The agent runs:
 
 ```
 Step 1 (search): "사용자가 입력한 문구가 포함된 문서를 검색한 결과,
-  '시험기준 및 시험방법 관리 방법서.pdf'와 ... 두 건의 관련 문서가
-  확인되었습니다."
+  '<related-procedure-A>.pdf'와 '<related-procedure-B>.pdf' 두 건의
+  관련 문서가 확인되었습니다."
 
 Step 2 (document_fetch): "검색 및 문서 추출 결과, 사용자가 입력한
   문구와 정확히 일치하는 내용을 포함한 문서를 찾았습니다. ..."
@@ -94,9 +94,8 @@ LLM judges whether the user's substring is in the chunk; we do not.
 
 The answer text reads "이 정확한 문구는 사내에서 확인되지
 않습니다." The reference card next to it shows
-`[SOP] 필터 밸리데이션.pdf` with score 0.5038 — a document about
-filter validation, completely unrelated to the user's question about
-suitability tests.
+`<unrelated-topic>.pdf` with score 0.5038 — a document on a
+different topic, completely unrelated to what the user asked about.
 
 The user does not read score numbers. They read a doc card next to a
 hedge answer and conclude either "the agent contradicted itself" or
@@ -151,7 +150,7 @@ After 4 search steps, document_fetch calls, and a long thinking
 trail, the final answer is:
 
 > "검색된 SOP 내에 해당 문구와 정확히 일치하는 규정은 발견되지
-> 않았습니다. 식약처 가이드라인 또는 사내 표준 규정의 일부로
+> 않았습니다. 외부 규제 가이드라인 또는 사내 상위 규정의 일부로
 > 보입니다."
 
 Two sentences. The user has just watched the agent "work hard" for
