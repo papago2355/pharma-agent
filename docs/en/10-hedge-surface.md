@@ -1,35 +1,43 @@
-# The hedge surface — making "not found" look honest, not lazy
+# Hedge cases — making "not found" look honest, not lazy
 
-When an agent decides to hedge, the user is in the most trust-fragile
-state of the entire conversation. They have just watched the loop trail
-— search calls, agent thoughts, document fetches — and now read
-"couldn't find an exact match." If the trail looked rich and the answer
-looks thin, the user does not read it as honest. They read it as the
-agent giving up.
+The moment an agent gives a hedge — its defensive "I don't have a
+confident answer" reply — is the moment the user is most likely to
+lose trust in the entire conversation. The user has just spent ten or
+twelve seconds watching the agent issue search calls, narrate its
+`thought` process, and pull documents. Then the reply comes back as
+"couldn't find an exact match." If the trail looked rich and the
+answer reads thin, the user does not interpret it as honesty. They
+interpret it as **the agent gave up halfway through.**
 
-This chapter covers three independent failure modes at the hedge
-boundary. Each produces a different "looks lazy" signal and is fixed
-on a different surface:
+This chapter covers three independent failure modes that all surface
+at the hedge boundary. Each produces a different "looks lazy" signal,
+and each has to be fixed at a different surface (the agent's
+streamed thoughts, the SSE event the frontend reads, or the
+generation LLM's final output).
 
-1. **Loop-thought ↔ final-answer contradiction** — the agent's streamed
-   step thought claims a match; the final answer denies it. The user
-   sees both side by side.
-2. **Misleading citation next to a hedge** — the answer says "not
-   found"; the reference card next to it shows a 0.50-score document
-   anyway.
-3. **One-sentence "couldn't find" dismissal** — after four search
-   steps and a thinking trail, the answer is two sentences. Activity
-   versus output mismatch.
+1. **A contradiction between the agent's `thought` and its final
+   answer** — the streamed thinking trail says "found a matching
+   document," and the final answer says "nothing was found." The
+   user reads both.
+2. **A misleading citation card next to the hedge** — the answer
+   says "not found," and the reference card next to it shows a
+   document with relevance score 0.50 that has nothing to do with
+   the question.
+3. **A one-sentence dismissal** — after four search steps and a long
+   thinking trail, the final answer is two sentences. The output is
+   wildly out of proportion with the visible activity that produced
+   it.
 
-Each fix is small. Together they make the hedge surface match the
-activity that produced it.
+None of the three fixes is large on its own. But all three have to
+land for the hedge surface to feel proportionate to the work that
+preceded it.
 
 ## 1. The verbatim-claim contradiction
 
 **Symptom**
 
-A user pastes a verbatim regulatory passage and asks "where is this
-from?" The agent runs:
+A user pastes a verbatim regulatory passage and asks, "where does
+this come from?" The agent runs:
 
 ```
 Step 1 (search): "사용자가 입력한 문구가 포함된 문서를 검색한 결과,
@@ -43,81 +51,92 @@ Final answer: "사용자께서 인용하신 문구는 사내 색인 어디에도
   등재되어 있지 않습니다."
 ```
 
-The user reads step 2 ("정확히 일치를 찾았다") and the final answer
-("색인에 없다") in the same UI. Direct contradiction. Trust collapses,
-even when the *content* of the final answer is correct.
+The user reads step 2 ("정확히 일치를 찾았다" — exact match found)
+and the final answer ("색인에 없다" — not in the corpus) on the same
+screen. It is a direct contradiction. Even when the final answer is
+factually correct, the user's trust is already gone by the time they
+get to it.
 
 **Why it happens**
 
-The agent's per-step `thought` is generated from search-result
-*metadata* (file_name, score, doc_id) — not the chunk *text*. Two
-related SOPs ranking high on dense similarity is enough for the agent
-to write "exact match found." Then the generation LLM, which reads the
-actual chunk text, sees no verbatim overlap and correctly hedges.
+The agent's per-step `thought` is generated from the *metadata* of
+search results — file_name, score, doc_id — not from the *text* of
+the chunks themselves. Two related SOPs ranking high on dense
+similarity is enough for the agent to write "I found an exact match."
+Then the generation LLM, which actually reads the chunk text, sees
+no verbatim overlap and (correctly) hedges.
 
-The agent and the generation LLM use different evidence. The user sees
-both outputs, sees them disagree, and concludes one of them is lying.
+Inside the same turn, the agent and the generation LLM are looking
+at different evidence and reaching different conclusions. The user
+sees both outputs side by side, sees they disagree, and concludes
+that one of them is lying.
 
-This is the deeper bug under "topic-relevant ≠ verbatim-present."
-Dense retrieval is good at finding documents about *the same subject*.
-It is not a phrase search. The agent's thought confuses the two.
+The deeper bug is "topical relevance ≠ verbatim presence." Dense
+retrieval is excellent at finding documents *about the same subject*,
+but it is not phrase search. The agent's intermediate thought
+confuses the two.
 
-**Fix — VERBATIM-CLAIM HONESTY rule**
+**Fix — the VERBATIM-CLAIM HONESTY rule**
 
-Add a system-prompt rule that gates the agent's `thought` content:
+Add a system-prompt rule that gates the content of the agent's
+`thought`.
 
-> Do NOT state in your `thought` that you "found the user's exact
-> quoted text" / "정확히 일치하는 내용을 포함한 문서를 찾았습니다" /
-> "해당 문구는 …에 포함되어 있습니다" unless a substantive substring
-> of the user's quote (≥ 10 Korean characters, or one full clause)
-> literally appears in the retrieved chunk text.
+> Do NOT write "정확히 일치하는 내용을 포함한 문서를 찾았습니다" or
+> "해당 문구는 …에 포함되어 있습니다" in your `thought` unless a
+> substantive substring of the user's quote (≥ 10 Korean characters,
+> or one full clause) literally appears in the retrieved chunk text.
 >
-> When the chunks are topically related but do NOT contain the
-> verbatim text, say so explicitly: "주제는 일치하는 SOP는
-> 확인되었으나, 인용 문구의 직접적인 포함은 청크에서 확인되지
-> 않습니다."
+> When the chunks are topically related but the verbatim text is
+> not present, say that explicitly: "주제가 일치하는 사내 문서는
+> 확인되었으나, 인용하신 문구가 청크 내에 직접적으로 포함되어
+> 있지는 않습니다."
 >
-> The rule applies in both directions: do not over-claim a match, and
-> do not under-claim ("nothing found") when topical chunks DID return.
+> The rule applies in both directions. Do not over-claim a match,
+> and do not under-claim ("nothing found") when topical chunks DID
+> come back.
 
-Why this works: the agent now has explicit guidance to distinguish
-*topical relevance* from *verbatim presence*, and the `thought` it
-streams to the user is grounded in the same evidence as the final
+Why it works: the agent now has explicit guidance to distinguish
+*topical relevance* from *verbatim presence*, and the `thought`
+streaming to the user is grounded in the same evidence as the final
 answer.
 
-This is a prompt rule, not a regex check on the agent's output. The
-LLM judges whether the user's substring is in the chunk; we do not.
+This is a prompt rule, not a regex muzzle on agent output. Whether
+the user's substring is present in a chunk is something the LLM
+should read and judge — not something we hard-code from the outside.
 
-## 2. The misleading citation
+## 2. The misleading citation card
 
 **Symptom**
 
-The answer text reads "이 정확한 문구는 사내에서 확인되지
-않습니다." The reference card next to it shows
-`<unrelated-topic>.pdf` with score 0.5038 — a document on a
-different topic, completely unrelated to what the user asked about.
+The answer says "이 정확한 문구는 사내에서 확인되지 않습니다" — the
+exact phrase is not in our corpus. The reference card sitting next
+to that answer shows `<unrelated-topic>.pdf` at score 0.5038, a
+document on a completely different subject from what the user asked
+about.
 
-The user does not read score numbers. They read a doc card next to a
-hedge answer and conclude either "the agent contradicted itself" or
-"this is the source but the agent missed it." Both readings are wrong;
-both are the surface's fault.
+The user does not bother to read the relevance score number. They
+look at the doc card next to the hedge and conclude one of two
+things: "the agent contradicted itself" or "this is the source and
+the agent failed to read it." Both readings are wrong, but both are
+the surface's fault.
 
 **Why it happens**
 
-Search retrieval has a relevance threshold (often rerank ≥ 0.40 in
-production, calibrated to "borderline relevant"). The display of
-references typically reuses the same list. But "borderline relevant"
-at the retrieval stage is "definitely not the source" at the
-presentation stage. A doc the user can read with their own eyes is
-implying relevance that the doc does not have.
+Search retrieval has a relevance threshold (in production, often
+something like rerank ≥ 0.40, calibrated as "borderline relevant").
+The reference list shown in the UI typically reuses that same list.
+But "borderline relevant" at the retrieval stage is "definitely not
+the source" at the presentation stage. A document the user sees with
+their own eyes is implying a relationship the document does not
+actually have.
 
 **Fix — separate the display floor from the retrieval floor**
 
 Apply a numeric score floor *at the user-facing emission boundary*
 (empirically ≥ 0.55 for BGE-reranker output). This is pure data
-validation, not a semantic decision — no Korean string matching
-involved. The full reference list is still recorded for forensics;
-only the UI sees the filtered version.
+validation, not a semantic decision — there is no Korean string
+matching involved. The full reference list is still recorded on the
+server for forensics; only the UI sees the filtered version.
 
 ```python
 USER_FACING_REF_FLOOR = float(os.environ.get("USER_FACING_REF_FLOOR", "0.55"))
@@ -132,140 +151,163 @@ yield f"data: {sse({
 ```
 
 The retrieval threshold (0.40, "borderline relevant") is the right
-floor for the LLM to reason over chunks — it should see weak matches
-and decide what to do. The display threshold (0.55, "worth showing
-the user") is the right floor for the citation card. Same data, two
-consumers, two floors.
+floor for the LLM, which has to read weak matches and reason about
+them. The display threshold (0.55, "worth showing the user") is the
+right floor for the citation card. Same data, different consumers,
+different floors.
 
-This fix is also the one that does NOT need a prompt rule. It is
-numeric, deterministic, and side-effect-free. If you ship nothing
-else from this chapter, ship this: it is the cheapest improvement to
-the hedge surface in the whole guide.
+This is the only fix in the chapter that needs no prompt rule —
+numeric, deterministic, no surprising side-effects. If you take only
+one thing from this chapter, take this one. It is the cheapest
+improvement to the hedge surface in the entire guide.
 
 ## 3. The one-sentence dismissal
 
 **Symptom**
 
-After 4 search steps, document_fetch calls, and a long thinking
+After four search steps, document_fetch calls, and a long thinking
 trail, the final answer is:
 
-> "검색된 SOP 내에 해당 문구와 정확히 일치하는 규정은 발견되지
-> 않았습니다. 외부 규제 가이드라인 또는 사내 상위 규정의 일부로
-> 보입니다."
+> "검색된 사내 규정 내에 해당 문구와 정확히 일치하는 내용은
+> 발견되지 않았습니다. 외부 규제 가이드라인 또는 사내 상위 규정의
+> 일부로 보입니다."
 
-Two sentences. The user has just watched the agent "work hard" for
-~12 seconds. The output looks like the agent gave up halfway.
+Two sentences. The user has just watched ~12 seconds of the agent
+"working hard." The output reads as if the agent ran out of effort
+and gave up.
 
 **Why it happens**
 
-Most hedge-output prompts are written defensively — "if you don't
-find it, say so." That logic is correct, but the *length* and *shape*
-signal is wrong. A two-sentence dismissal after rich activity reads
-as laziness, even when the conclusion is correct.
+Most hedge-output prompts are written defensively — "if you can't
+find it, say so honestly." That is correct logically. But the
+*length* and *shape* signals are wrong. After a rich exploration
+trail, a two-sentence dismissal feels lazy regardless of whether
+the conclusion is correct.
 
-There is also an asymmetry: a successful answer is naturally long
-(it has content to render). A hedge has no content. So the default
-generation produces a short hedge and a long success — which means
-"hedge looks lazy" is built into the system unless the prompt fights
-it.
+There is also an asymmetry. A successful answer naturally runs long,
+because there is content to render. A hedge has no content to
+render. So with default generation settings, success comes back
+long and hedge comes back short. In other words, "the hedge looks
+lazy" is built into the system unless the prompt actively fights it.
 
-**Fix — substantive 5-part out-of-corpus answer shape**
+**Fix — a substantive five-part out-of-corpus answer shape**
 
-When the corpus does not contain the answer, the answer must match
-the activity that produced it. Five parts, 5–8 sentences total — not
-a wall of text:
+When the corpus does not contain the answer, the answer should be
+shaped to match the work that produced it. Five parts, 5–8
+sentences total — long enough to feel proportionate, short enough
+that it does not become a wall of text.
 
-1. **Clear conclusion** (1 sentence). State plainly. Avoid vague
-   "may be in upper-tier regulations" — be direct. Conditional
-   wording: if related docs ≥ 0.55 will be listed in part 3, soften
-   the opening so it does not contradict the listing; otherwise keep
-   it harsh.
-2. **Scope of search** (1 sentence). Briefly name what was searched —
-   SOP index, QMS index, wiki. The user should see that the corpus
-   is bounded, not that the agent is incompetent.
-3. **Closest internal documents** — only if at least one chunk has
-   rerank ≥ 0.55 AND is genuinely on a related topic. List 1–3, each
-   with one sentence on what they DO cover and why they are NOT the
-   source the user asked for. If no chunk meets this bar, OMIT this
-   part entirely. Do not pad with weak citations.
-4. **Probable external source** (1–2 sentences). When the wording or
-   framing points to an external regulation, name the most likely
-   candidate based on distinctive phrasing in the user's text. Do
-   not invent a specific article number, notification number, or
-   revision year.
+1. **Clear conclusion** (1 sentence). State the result plainly.
+   Avoid vague hedges like "may be in upper-tier regulations." A
+   conditional opening is fine — if part 3 will list documents at
+   ≥ 0.55, soften the opening so it does not contradict the listing
+   that follows; otherwise, keep it firm.
+2. **Scope of search** (1 sentence). Briefly name what was actually
+   searched — SOP index, QMS index, internal wiki. The user should
+   come away thinking "the agent's reach is bounded," not "the
+   agent is incompetent."
+3. **Closest internal documents** (conditional). Only if at least
+   one chunk has rerank ≥ 0.55 AND is genuinely on a related topic.
+   List 1–3 documents, each with one sentence on what the document
+   *does* cover and why it is *not* the source the user asked for.
+   If no chunk meets this bar, OMIT this part entirely. Do not pad
+   with weak citations to fill space.
+4. **Probable external source** (1–2 sentences). When the wording
+   or framing of the user's question points to an external
+   regulation, name the most likely candidate based on the
+   distinctive phrasing of the user's text. Do not invent a
+   specific article number, notification number, or revision year.
 5. **Concrete next step** (1 sentence). Suggest the user check the
-   named external source directly, OR re-ask with alternative
-   keywords if they want to find an internal implementation of that
-   external rule.
+   probable external source directly, OR — if they want to find an
+   internal implementation of that external rule — suggest specific
+   alternative keywords they can re-ask with.
 
-Never reply with "couldn't find an exact match" alone. Never
-recommend "ask differently" without naming what was searched and
-what the probable external source is. If you cannot identify a
-probable external source (part 4), say so explicitly — do not guess
-a regulation.
+Never close with "couldn't find an exact match" alone. Never say
+"please ask differently" without first naming what you searched and
+what you think the external source is. If you genuinely cannot
+identify a probable external source (part 4), say so explicitly —
+do not guess a regulation.
 
-The shape applies to ANY out-of-corpus answer, not just verbatim
-quotation lookups. The same template works for a query whose topic
-isn't in the corpus, or a query that needs a doc that wasn't
-indexed.
+This shape applies to *any* out-of-corpus answer, not just verbatim
+quotation lookups. The same template works for queries whose topic
+is not in the corpus at all, and for queries that need a document
+that was never indexed.
 
 ## How the three fixes compose
 
-Each fix targets a different surface:
+Each fix targets a different surface.
 
-| Fix | Surface | Class |
-|---|---|---|
-| VERBATIM-CLAIM HONESTY | Agent's streamed `thought` | Prompt rule |
-| Display floor | Reference card emission | Code (numeric, no semantics) |
-| 5-part answer shape | Generation LLM output | Prompt rule |
+| Fix | Surface | Type |
+| :--- | :--- | :--- |
+| **VERBATIM-CLAIM HONESTY** | The agent's streamed `thought` | Prompt rule |
+| **Display-floor separation** | Reference card emission | Code (numeric, no semantics) |
+| **Five-part answer shape** | Generation LLM output | Prompt rule |
 
 The contradiction (1) is fixed at the agent's input boundary. The
 misleading citation (2) is fixed at the SSE boundary between server
 and frontend. The dismissal (3) is fixed at the generator's output.
-They compose because they do not share state; each can land
-independently and any subset improves the hedge surface.
+Because the three fixes do not share state, they compose cleanly —
+each one can land independently, and any subset of them improves
+the hedge surface.
 
-What the user sees after all three: an agent that worked, found
-related-but-not-matching documents, named what it searched, named the
-probable external source, and pointed to a concrete next step. The
-hedge becomes a usable answer rather than a refusal.
+After all three are in place, here is the agent the user
+experiences: it searched hard, found related-but-not-matching
+documents, was transparent about where it looked, named the
+probable external source, and gave a concrete suggestion for what
+to do next.
 
-## What this isn't
+The hedge stops being a refusal and starts being a useful answer.
 
-- **It isn't a retrieval improvement.** The pasted regulatory passage
-  genuinely is not in our corpus; no amount of better retrieval will
-  find it. The fix is at the surface, not at the index.
-- **It isn't a hallucination.** The hedge is correct. The bug is in
-  how the correct hedge is presented.
-- **It isn't a regex on the agent's output.** The display floor is
-  numeric (`score >= 0.55`); no Korean string matching. The other
-  two fixes are prompt rules where the LLM judges, not us.
+## Things to watch out for
+
+*   **This is not a retrieval-quality problem.** If the user's text
+    genuinely is not in the corpus, no amount of better retrieval
+    will produce it. The fixes in this chapter live on "how the
+    answer is presented," not on "how the index ranks documents."
+*   **The hedge itself is not a hallucination.** The conclusion
+    "we don't have this" is correct. The bug is purely in *how that
+    correct conclusion is shown to the user.* Keep this distinction
+    in mind when triaging user-submitted bug reports.
+*   **Be careful with regex on agent output.** The display floor
+    (`score >= 0.55`) is a numeric check with no Korean string
+    matching, which is why it is safe. Trying to control every
+    edge case with regex on agent output is a different proposition
+    and almost always introduces its own bugs.
 
 ## Diagnostic checklist
 
-When a user reports any of the following, map directly to one of the
-three fixes:
+When a user submits a complaint, you can usually map it 1:1 onto
+one of the three fixes.
 
-- "The agent said it found something then said nothing was found"
-  → fix #1.
-- "The cited document has nothing to do with my question"
-  → fix #2.
-- "The agent gave up too fast / felt lazy"
-  → fix #3.
+*   "The agent first said it found something, then said it didn't"
+    → **fix #1.**
+*   "The agent said it didn't find anything, but the cited document
+    has nothing to do with my question"
+    → **fix #2.**
+*   "The agent gave up too fast / it feels like it didn't really
+    try"
+    → **fix #3.**
 
-All three are about the gap between the activity the user watched
-and the surface they read. Close the gap on each surface
-independently.
+All three complaints are about the gap between **the activity the
+user watched** and **the output the user ended up reading.** That
+gap has to be closed at each surface independently.
 
-## Where it fits with chapter 09
+## Relationship to chapter 09
 
-Chapter 09 covers escape *rules* — how the agent decides to stop
-re-searching. This chapter covers what happens *after* the agent has
-correctly decided to escape. The two are sequential: 09's rules tell
-the agent "stop and call final_answer with a hedge"; 10's surface
-patterns govern how that hedge is shown.
+Chapter 09 covered the *escape rules* — the signals an agent reads
+to decide it should stop re-searching. This chapter covers what
+happens *immediately after* the agent has correctly decided to
+escape.
 
-If you ship 09 without 10, the agent escapes correctly but the
-escape *looks* lazy. If you ship 10 without 09, the surface is
-polished but the agent still spins through dead ends. Both are needed
-to make multi-turn dead ends feel like answers, not refusals.
+The two chapters are sequential. Chapter 09's rules tell the agent
+"stop searching, call final_answer with a hedge." Chapter 10's
+surface patterns govern what that hedge looks like on the user's
+screen.
+
+Ship 09 without 10 and the agent escapes correctly from infinite
+loops, but the escape *looks lazy*. Ship 10 without 09 and the
+surface is polished, but the agent is still spinning through dead
+ends in a corpus that doesn't contain the answer.
+
+To make a dead-end conversation feel like a useful answer rather
+than a refusal, you need both chapters working together.

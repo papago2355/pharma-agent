@@ -34,7 +34,7 @@ so the original scoping isn't lost.
   list-level dedup, and an LLM-composed graceful no-results handler
   replacing canned-string fallbacks. Distilled from a multi-turn
   awareness phase that resolved 3 of 4 production regression failures.
-- ✅ **The hedge surface** → [`docs/en/10-hedge-surface.md`](docs/en/10-hedge-surface.md) · [`ko`](docs/ko/10-hedge-surface.md)
+- ✅ **Hedge cases** → [`docs/en/10-hedge-surface.md`](docs/en/10-hedge-surface.md) · [`ko`](docs/ko/10-hedge-surface.md)
   — three independent failure modes at the hedge boundary that all
   read as "the agent gave up" even when the conclusion is correct:
   loop-thought ↔ final-answer contradiction (over-claimed `thought`

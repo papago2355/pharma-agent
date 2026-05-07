@@ -170,7 +170,7 @@ Docs are side-by-side EN + KO — pick whichever reads faster for you.
 | 05 | Korean NLP gotchas | [en](docs/en/05-korean-nlp-gotchas.md) | [ko](docs/ko/05-korean-nlp-gotchas.md) |
 | 06 | Pharma-specific patterns | [en](docs/en/06-pharma-specific.md) | [ko](docs/ko/06-pharma-specific.md) |
 | 09 | Multi-turn escape rules | [en](docs/en/09-multi-turn-escape-rules.md) | [ko](docs/ko/09-multi-turn-escape-rules.md) |
-| 10 | The hedge surface — making "not found" look honest | [en](docs/en/10-hedge-surface.md) | [ko](docs/ko/10-hedge-surface.md) |
+| 10 | Hedge cases — making "not found" look honest | [en](docs/en/10-hedge-surface.md) | [ko](docs/ko/10-hedge-surface.md) |
 
 ### 2 · Install the skill (for Claude Code)
 
