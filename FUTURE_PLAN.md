@@ -34,6 +34,17 @@ so the original scoping isn't lost.
   list-level dedup, and an LLM-composed graceful no-results handler
   replacing canned-string fallbacks. Distilled from a multi-turn
   awareness phase that resolved 3 of 4 production regression failures.
+- ✅ **The hedge surface** → [`docs/en/10-hedge-surface.md`](docs/en/10-hedge-surface.md) · [`ko`](docs/ko/10-hedge-surface.md)
+  — three independent failure modes at the hedge boundary that all
+  read as "the agent gave up" even when the conclusion is correct:
+  loop-thought ↔ final-answer contradiction (over-claimed `thought`
+  contradicts a correctly-hedged answer), misleading low-score
+  citations next to a hedge, and one-sentence dismissals after rich
+  thinking trails. Three fixes that compose: a VERBATIM-CLAIM
+  HONESTY prompt rule, a numeric display-floor on user-facing
+  references, and a 5-part substantive out-of-corpus answer shape.
+  Sequenced after 09 — 09 decides *when* to escape, 10 governs how
+  the escape is shown.
 
 ---
 
