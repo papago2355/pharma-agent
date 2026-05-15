@@ -224,16 +224,41 @@ exact identifiers" is more useful in this domain than "here's a
 helpful summary." The summary has no citation discipline. The
 refusal does.
 
-### 3. Users are operationally accountable, not just curious
+### 3. We have heard both complaints, in that order
 
-The complaint "this thing is too stiff" usually comes from users
-in the early adoption period, when the chatbot is being compared
-against ChatGPT. The same users, six months in, file complaints
-of the opposite shape: "the agent answered confidently and the
-answer was wrong, and now I have to explain to QA why my CAPA
-cited a non-existent SOP." The second complaint is the one with
-real consequences, and it is the one the design has to optimize
-against.
+This is not a hypothetical tradeoff for us. It is the arc the
+system actually went through, and the *order* of the complaints
+is itself the argument.
+
+In the early phase, the agent was looser. It would attempt an
+answer when retrieval was thin, paraphrase when a citation was
+not crisp, and accept the user's framing when a filter was
+ambiguous. The complaints from that phase had a specific shape:
+"the agent answered confidently and the answer was wrong, and
+now I have to explain to QA why my CAPA cited a non-existent
+SOP," "the agent told me the approver was X but the SOP says
+Y, the deviation report went out wrong." Those complaints came
+with consequences attached — re-issued documents, training
+records that had to be reopened, quality follow-ups.
+
+The design response was to harden the agent: tighten citation
+discipline, require document-number presence before quoting,
+refuse to fabricate, push back on wrong-premise filters. After
+that work shipped, the complaint shape flipped. The new
+complaint is "this thing is too stiff, ChatGPT would have just
+helped me." It is louder, it shows up in user surveys, it is
+the one cited in feature requests.
+
+It is also the better complaint to be hearing. The first kind
+costs the company quality findings; the second kind costs the
+agent some user-satisfaction points. Optimizing the design back
+toward "flexible" would resolve the second by reintroducing the
+first — and we already know what that looks like, because we
+lived through it. Hearing the stiffness complaint is, in this
+sense, a signal that the design moved in the right direction.
+The job is not to silence it by relaxing accuracy; it is to
+address it on the surface (chapter 10) without rolling back the
+substance.
 
 ## This is not a pharma quirk
 
